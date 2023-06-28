@@ -16,6 +16,8 @@ def df_pytest():
             ),
             int_col=pd.Series(np.random.randint(0, 1_000, 100), dtype=int),
             float_col=pd.Series(np.random.uniform(0, 1, 100), dtype=float),
+            float_col_2=pd.Series(np.random.uniform(-1, 1, 100), dtype=float),
+            float_col_3=pd.Series(np.random.uniform(-1_000, 1_000, 100), dtype=float),
         )
     )
 

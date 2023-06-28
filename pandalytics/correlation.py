@@ -30,7 +30,10 @@ class PairwiseCorrelations:
 
         return self.df_pairwise_corr
 
-    def plot(self, df: pd.DataFrame, height_per_feature: Optional[int] = 50):
+    def plot(self,
+             df: pd.DataFrame,
+             **kwargs
+             ):
         pairwise_cols = {
             "variable_1",
             "variable_2",
@@ -45,7 +48,6 @@ class PairwiseCorrelations:
             self.transform(df)
 
         n_pairs = len(self.df_pairwise_corr)
-        height = n_pairs * height_per_feature
 
         bar_plot = (
             px.bar(
@@ -58,8 +60,8 @@ class PairwiseCorrelations:
                 color_continuous_scale=["red", "white", "green"],
                 color_continuous_midpoint=0,
                 range_color=[-1, 1],
-                height=height,
                 title=f"{n_pairs:,} Pairwise Correlations",
+                **kwargs
             )
             .update_layout(
                 title_x=0.5,
