@@ -4,7 +4,7 @@ import pandas as pd
 
 def groupby_apply(
     df: pd.DataFrame,
-    groupby_cols: Union[str, List, pd.Series],
+    groupby_cols: Union[str, int, float, List, pd.Series],
     apply_func: Callable,
     observed: Optional[bool] = True,
     dropna: Optional[bool] = False,
@@ -41,3 +41,6 @@ def groupby_apply(
         .apply(apply_func, **kwargs)
         .reset_index(groupby_cols)
     )
+
+
+pd.DataFrame.groupby_apply = groupby_apply
