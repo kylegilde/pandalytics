@@ -1,4 +1,4 @@
-from typing import Union, Optional, List, Dict, Callable
+from typing import Union, Optional, Literal
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
@@ -9,8 +9,11 @@ import plotly.express as px
 class PairwiseCorrelations:
     """ """
 
-    def transform(self, df) -> pd.DataFrame:
-        df_corr_matrix = df.corr("spearman", numeric_only=True)
+    method: Literal["pearson", "kendall", "spearman"] = "spearman"
+    sep: str = " & "
+
+    def transform(self, df: pd.DataFrame) -> pd.DataFrame:
+        df_corr_matrix = df.corr(self.method, numeric_only=True)
         nan_mask = np.triu(np.ones(df_corr_matrix.shape)).astype(bool)
 
         self.df_pairwise_corr = (
@@ -22,7 +25,7 @@ class PairwiseCorrelations:
             .assign(
                 abs_value=lambda df: df.value.abs(),
                 variable_pair=lambda df: df.variable_1.astype(str).str.cat(
-                    df.variable_2.astype(str), sep=" & "
+                    df.variable_2.astype(str), sep=self.sep
                 ),
                 is_positive=lambda df: df.value.ge(0),
                 text=lambda df: df.value.round(2),
@@ -36,7 +39,6 @@ class PairwiseCorrelations:
         self,
         df: pd.DataFrame,
         min_abs_correlation: Optional[float] = None,
-        top_n: Optional[int] = None,
         **kwargs,
     ):
         if not hasattr(self, "df_pairwise_corr"):
@@ -45,14 +47,20 @@ class PairwiseCorrelations:
         n_pairs = len(self.df_pairwise_corr)
         title = f"{n_pairs:,} Pairwise Correlations"
 
-        if top_n:
-            df_plot = self.df_pairwise_corr.nlargest(
-                top_n, "abs_value", keep="all"
-            ).sort_values("abs_value")
+        if min_abs_correlation:
+            if min_abs_correlation > self.df_pairwise_corr.abs_value.min():
+                raise ValueError(
+                    f"{min_abs_correlation = } is greater than "
+                    "all of the absolute correlation values."
+                )
+
+            df_plot = self.df_pairwise_corr.loc[
+                lambda df: df.abs_value.qe(min_abs_correlation)
+            ]
         else:
             df_plot = self.df_pairwise_corr
 
-        bar_plot = (
+        return (
             px.bar(
                 df_plot,
                 x="abs_value",
@@ -73,7 +81,7 @@ class PairwiseCorrelations:
                 title_x=0.5,
                 font=dict(color="black"),
                 plot_bgcolor="lightgray",
-                hovermode=False,
+                hovermode=False,  # turn off the hover tooltip data
             )
             .update_yaxes(
                 title="",
@@ -85,4 +93,3 @@ class PairwiseCorrelations:
                 textfont=dict(color="black"),
             )
         )
-        return bar_plot
