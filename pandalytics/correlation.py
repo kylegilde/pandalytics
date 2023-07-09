@@ -1,19 +1,18 @@
-from typing import Union, Optional, Literal
+from typing import Optional, Literal
 from dataclasses import dataclass
 import numpy as np
+from numpy.typing import ArrayLike
 import pandas as pd
 import plotly.express as px
 
 
 @dataclass
 class PairwiseCorrelations:
-    """
+    """ """
 
-    """
-
-    method: Literal["pearson", "kendall", "spearman"] = "spearman"
-    sep: str = " & "
-    dtypes = ("number", bool, "datetime64")
+    method: Optional[Literal["pearson", "kendall", "spearman"]] = "spearman"
+    sep: Optional[str] = " & "
+    dtypes: Optional[ArrayLike] = ("number", bool, "datetime64")
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         # df_corr_matrix = df.corr(self.method, numeric_only=True)
@@ -33,6 +32,7 @@ class PairwiseCorrelations:
                 ),
                 is_positive=lambda df: df.value.ge(0),
                 text=lambda df: df.value.round(2),
+                method=self.method,
             )
             .sort_values("abs_value", ignore_index=True)
         )
@@ -65,13 +65,13 @@ class PairwiseCorrelations:
             df_plot = self.df_pairwise_corr
             title = f"{df_plot.shape[0]} Pairwise Correlations"
 
-
         return (
             px.bar(
                 df_plot,
                 x="abs_value",
                 y="variable_pair",
                 color="value",
+                # pattern_shape="method",
                 text="text",
                 title=title,
                 # Create a standardize, static color scale,
