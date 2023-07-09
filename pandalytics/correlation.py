@@ -7,13 +7,17 @@ import plotly.express as px
 
 @dataclass
 class PairwiseCorrelations:
-    """ """
+    """
+
+    """
 
     method: Literal["pearson", "kendall", "spearman"] = "spearman"
     sep: str = " & "
+    dtypes = ("number", bool, "datetime64")
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
-        df_corr_matrix = df.corr(self.method, numeric_only=True)
+        # df_corr_matrix = df.corr(self.method, numeric_only=True)
+        df_corr_matrix = df.select_dtypes(self.dtypes).corr(self.method)
         nan_mask = np.triu(np.ones(df_corr_matrix.shape)).astype(bool)
 
         self.df_pairwise_corr = (
@@ -44,21 +48,23 @@ class PairwiseCorrelations:
         if not hasattr(self, "df_pairwise_corr"):
             self.transform(df)
 
-        n_pairs = len(self.df_pairwise_corr)
-        title = f"{n_pairs:,} Pairwise Correlations"
-
         if min_abs_correlation:
-            if min_abs_correlation > self.df_pairwise_corr.abs_value.min():
+            max_abs_value: float = self.df_pairwise_corr.abs_value.max()
+            if min_abs_correlation > max_abs_value:
                 raise ValueError(
                     f"{min_abs_correlation = } is greater than "
-                    "all of the absolute correlation values."
+                    f"maximum absolute value of {max_abs_value}."
                 )
 
             df_plot = self.df_pairwise_corr.loc[
-                lambda df: df.abs_value.qe(min_abs_correlation)
+                lambda df: df.abs_value.ge(min_abs_correlation)
             ]
+
+            title = f"Showing {df_plot.shape[0]} of {self.df_pairwise_corr.shape[0]:,} Pairwise Correlations"
         else:
             df_plot = self.df_pairwise_corr
+            title = f"{df_plot.shape[0]} Pairwise Correlations"
+
 
         return (
             px.bar(
