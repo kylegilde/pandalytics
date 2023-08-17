@@ -15,6 +15,12 @@ def create_code_toggle(button_name: str = "Toggle Code") -> IPython.core.display
     -------
     IPython.core.display.HTML object
 
+    The following html works but not as well.
+    %%html
+    <style id=hide>div.input{display:none;}</style>
+    <button type="button"
+    onclick="var myStyle = document.getElementById('hide').sheet;myStyle.insertRule('div.input{display:inherit !important;}', 0);">
+    Show inputs</button>
     """
     return HTML(
         """
