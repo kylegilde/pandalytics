@@ -3,7 +3,9 @@ import pandas as pd
 import plotly.graph_objects as go
 from pandalytics.correlation import PairwiseCorrelations
 
-from plotly.graph_objects import Figure
+
+def test_transform(df_pytest):
+    pass
 
 def test_plot(df_pytest):
     pc = PairwiseCorrelations()
@@ -14,7 +16,7 @@ def test_plot(df_pytest):
 
     expected_fig = (
         "Figure({\n    'data': [{'alignmentgroup': 'True',\n              'hovertemplate': ('abs_value=%{x}"
-        "<br>variable_pai' ... '%{marker.color}<extra></extra>'),\n              'legendgroup': '',\n      "
+        "<br>y_label=%{y}' ... '%{marker.color}<extra></extra>'),\n              'legendgroup': '',\n      "
         "        'marker': {'color': array([ 0.01087986, -0.02314951,  0.03048972,  0.03109561, -0.03204229,\n   "
         "                                       0.03342788, -0.03895749,  0.04447014, -0.04771265, "
         "-0.05404756,\n                                         -0.05690695, -0.09537289, -0.09896881, "
