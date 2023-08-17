@@ -2,9 +2,7 @@ from typing import Optional, List, Tuple, Union, Callable
 from dataclasses import dataclass
 
 import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
-from functools import partial
 
 
 @dataclass
@@ -152,7 +150,6 @@ def clean_dtypes(
     verbose: Optional[bool] = True,
 ) -> pd.DataFrame:
     """
-
     Cleans up all suboptimal Pandas dtypes by running 4 methods/functions
 
     - Casts all numeric-like non-numeric columns to numeric. convert_dtypes doesn't do this
@@ -162,21 +159,20 @@ def clean_dtypes(
     - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like string & object columns, & cast them to datetime, cast_to_datetime does this.
     - cast_to_string casts any remaining object columns (which probably contain arrays or non-scalar values like lists or dicts) to strings
 
-    :param df: DataFrame
-    Pass an empty list to turn off the transformation
-    :param numeric_dtypes_to_check: the dtypes that should be checked. Default is object & string
-    :param datetime_dtypes_to_check: the dtypes that should be checked. Default is string
-    :param string_dtypes_to_check:  the dtypes that should be checked. Default is object
-    :param make_copy: boolean, useful for debugging
-    :param verbose: Should the printing happen? Useful for debugging.
-    :return: DataFrame with datetime columns
-
     Parameters
     ----------
+    df: DataFrame
+    cols_to_check: a subset of columns to check.
+    numeric_dtypes_to_check: the dtypes that should be checked.
+    datetime_dtypes_to_check: the dtypes that should be checked.
+    category_dtypes_to_check: the dtypes that should be checked.
+    verbose: Should the printing happen?
 
-
+    Returns
+    -------
+    A DataFrame with more appropriate dtypes
     """
-    # print(get_memory_usage(df))
+
     return (
         df.pipe(
             cast_to_numeric,
@@ -198,28 +194,10 @@ def clean_dtypes(
             cols_to_check=cols_to_check,
         )
     )
-# ! pip install humanize
-# import humanize
-# from numerize import numerize
-# humanize(2)
+
+
 # def get_memory_usage(df):
-#     return humanize.naturalsize(df.memory_usage(deep=True).sum() / 1024)
-# humanize.intword(123455913, )
-# humanize.naturalsize(123353199988)
-# humanize.intword(353188).replace("illion", "").replace("thousand", "K").upper()
-#
-# a = clean_dtypes(df.astype("object").copy())
-# a.memory_usage("deep").sum()
-#
-# dir(a.info(memory_usage="deep"))
-#
-# b = a.info(memory_usage="deep")
-# b is None
-# get_memory_usage(a)
-# a.info(memory_usage="deep").__sizeof__()
-#
-# df.info(memory_usage="deep")
-#
-# get_memory_usage(df)
-# import sys
-# sys.getsizeof(df) / 1024
+#     # ! pip install humanize
+#     # import humanize
+#     # from numerize import numerize
+#     return humanize.naturalsize(df.memory_usage(deep=True).sum())
