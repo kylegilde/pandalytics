@@ -1,25 +1,46 @@
 from typing import Optional, List, Tuple, Union, Callable
+from functools import partial
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
 
 
+def _print_dtype_changes(df_new, old_dtypes):
+
+    old_dtypes = old_dtypes.rename("old_dtype")
+    new_dtypes = df_new.dtypes.rename("new_dtype")
+
+    df_changes = (
+        pd.concat([old_dtypes, new_dtypes], axis=1)
+        .loc[lambda df: df.old_dtype.ne(df.new_dtype)]
+        .rename_axis('column', axis=0)
+        .reset_index()
+    )
+
+    n_changes = len(df_changes)
+
+    print(
+        f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n",
+        df_changes,
+        "\n"
+    )
+
 @dataclass
 class DtypeCasting:
     """
-    -> pd.DataFrame:
-        Parameters
-        ----------
-        df: DataFrame
-        dtypes_to_check: a string or array of strings
-        new_dtype: a new dtype
-        cols_to_check: Limit the casting to a specific subset of columns. An array of strings
-        verbose: Should the printing happen?
 
-        Returns
-        -------
-        A DataFrame with new column dtypes
+    Parameters
+    ----------
+    dtypes_to_check:
+    new_dtype:
+    verbose:
+    coerce_func:
+    errors:
+
+    Returns
+    -------
+    A DataFrame with new column dtypes
 
     """
 
@@ -29,11 +50,25 @@ class DtypeCasting:
     coerce_func: Optional[Callable] = None
     errors: Optional[str] = "ignore"
 
+
     def cast(
         self,
         df: pd.DataFrame,
         cols_to_check: Optional[Union[List, Tuple, str, int, float]] = None,
     ) -> pd.DataFrame:
+        """
+
+        Parameters
+        ----------
+        df
+        cols_to_check
+
+        Returns
+        -------
+
+        """
+        old_dtypes = df.dtypes
+
         df_subset = df
 
         if cols_to_check is not None:
@@ -51,21 +86,10 @@ class DtypeCasting:
         casted_cols = df_subset.columns.tolist()
 
         if casted_cols:
-            if self.verbose:
-                dtypes_str = (
-                    " & ".join(self.dtypes_to_check)
-                    if isinstance(self.dtypes_to_check, (list, tuple))
-                    else self.dtypes_to_check
-                )
-
-                cols_str = "\n".join(casted_cols)
-
-                print(
-                    f"Casting {len(casted_cols)} {dtypes_str} columns to "
-                    f'{self.new_dtype}:\n\n{cols_str}'
-                )
 
             df[casted_cols] = df_subset
+            if self.verbose:
+                _print_dtype_changes(df, old_dtypes)
 
         return df
 
@@ -81,10 +105,11 @@ def cast_to_numeric(
     cols_to_check: Optional[Union[List, Tuple]] = None,
     **kwargs,
 ):
+    f = partial(pd.to_numeric, downcast="integer")
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         new_dtype="number",
-        coerce_func=pd.to_numeric,
+        coerce_func=f,
         errors=errors,
         verbose=verbose,
         **kwargs,
@@ -124,7 +149,7 @@ def cast_to_datetime(
 ):
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
-        new_dtype="number",
+        new_dtype=['datetime', 'datetimetz'],
         coerce_func=pd.to_datetime,
         errors=errors,
         verbose=verbose,
@@ -135,18 +160,11 @@ def cast_to_datetime(
 def clean_dtypes(
     df: pd.DataFrame,
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
-    numeric_dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
         "object",
         "string",
     ),
-    datetime_dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
-        "object",
-        "string",
-    ),
-    category_dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
-        "object",
-        "string",
-    ),
+    errors: Optional[str] = "ignore",
     verbose: Optional[bool] = True,
 ) -> pd.DataFrame:
     """
@@ -157,15 +175,15 @@ def clean_dtypes(
         - casts all integer-like float columns to Int64 and string-like object columns to string.
         - if possible, it casts object columns to strings. It won't do this if there are Python objects in the column.
     - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like string & object columns, & cast them to datetime, cast_to_datetime does this.
-    - cast_to_string casts any remaining object columns (which probably contain arrays or non-scalar values like lists or dicts) to strings
+    - cast_to_category casts any remaining columns (which probably contain arrays or non-scalar values like lists or dicts) to strings
 
     Parameters
     ----------
+
     df: DataFrame
     cols_to_check: a subset of columns to check.
-    numeric_dtypes_to_check: the dtypes that should be checked.
-    datetime_dtypes_to_check: the dtypes that should be checked.
-    category_dtypes_to_check: the dtypes that should be checked.
+    dtypes_to_check: the dtypes that should be checked.
+    errors:
     verbose: Should the printing happen?
 
     Returns
@@ -173,28 +191,27 @@ def clean_dtypes(
     A DataFrame with more appropriate dtypes
     """
 
-    return (
-        df.pipe(
-            cast_to_numeric,
-            dtypes_to_check=numeric_dtypes_to_check,
-            verbose=verbose,
-            cols_to_check=cols_to_check,
-        )
-        .convert_dtypes()
-        .pipe(
-            cast_to_datetime,
-            dtypes_to_check=datetime_dtypes_to_check,
-            verbose=verbose,
-            cols_to_check=cols_to_check,
-        )
-        .pipe(
-            cast_to_category,
-            dtypes_to_check=category_dtypes_to_check,
-            verbose=verbose,
-            cols_to_check=cols_to_check,
-        )
+    funcs = (
+        cast_to_numeric,
+        cast_to_datetime,
+        cast_to_category,
     )
 
+    cast_func_args = dict(
+        dtypes_to_check=dtypes_to_check,
+        errors=errors,
+        verbose=False,
+        cols_to_check=cols_to_check,
+    )
+
+    old_dtypes = df.dtypes
+
+    for func in funcs:
+        df = func(df, **cast_func_args)
+
+    _print_dtype_changes(df, old_dtypes)
+
+    return df
 
 # def get_memory_usage(df):
 #     # ! pip install humanize
