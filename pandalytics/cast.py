@@ -1,5 +1,4 @@
-from typing import Optional, List, Tuple, Union, Callable
-from functools import partial
+from typing import Optional, List, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
 
 import numpy as np
@@ -49,6 +48,7 @@ class DtypeCasting:
     verbose: Optional[bool] = True
     coerce_func: Optional[Callable] = None
     errors: Optional[str] = "ignore"
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = "integer",
 
 
     def cast(
@@ -77,8 +77,13 @@ class DtypeCasting:
         df_subset = df_subset.select_dtypes(self.dtypes_to_check)
 
         if self.coerce_func:
+
+            coerce_func_kwargs = dict(errors=self.errors)
+            if self.coerce_func is pd.to_numeric:
+                coerce_func_kwargs["downcast"] = self.downcast
+
             df_subset = df_subset.apply(
-                self.coerce_func, errors=self.errors
+                self.coerce_func, **coerce_func_kwargs
             ).select_dtypes(self.new_dtype)
         else:
             df_subset = df_subset.astype(self.new_dtype, errors=self.errors)
@@ -100,17 +105,22 @@ def cast_to_numeric(
         "object",
         "string",
     ),
-    verbose: Optional[bool] = True,
-    errors: Optional[str] = "ignore",
+        
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = "integer",
+        
     cols_to_check: Optional[Union[List, Tuple]] = None,
+    verbose: Optional[bool] = True,
+
     **kwargs,
 ):
-    f = partial(pd.to_numeric, downcast="integer")
+
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         new_dtype="number",
-        coerce_func=f,
+        coerce_func=pd.to_numeric,
         errors=errors,
+        downcast=downcast,
         verbose=verbose,
         **kwargs,
     ).cast(df, cols_to_check=cols_to_check)
@@ -123,7 +133,7 @@ def cast_to_category(
         "string",
     ),
     verbose: Optional[bool] = True,
-    errors: Optional[str] = "ignore",
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
     **kwargs,
 ):
@@ -143,7 +153,7 @@ def cast_to_datetime(
         "string",
     ),
     verbose: Optional[bool] = True,
-    errors: Optional[str] = "ignore",
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
     **kwargs,
 ):
@@ -164,8 +174,9 @@ def clean_dtypes(
         "object",
         "string",
     ),
-    errors: Optional[str] = "ignore",
-    verbose: Optional[bool] = True,
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = "integer",
+    super_verbose: Optional[bool] = False,
 ) -> pd.DataFrame:
     """
     Cleans up all suboptimal Pandas dtypes by running 4 methods/functions
@@ -191,23 +202,21 @@ def clean_dtypes(
     A DataFrame with more appropriate dtypes
     """
 
-    funcs = (
-        cast_to_numeric,
-        cast_to_datetime,
-        cast_to_category,
-    )
-
     cast_func_args = dict(
         dtypes_to_check=dtypes_to_check,
         errors=errors,
-        verbose=False,
+        verbose=super_verbose,
         cols_to_check=cols_to_check,
     )
 
     old_dtypes = df.dtypes
 
-    for func in funcs:
-        df = func(df, **cast_func_args)
+    df = (
+        df
+        .pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
+        .pipe(cast_to_datetime, **cast_func_args)
+        .pipe(cast_to_category, **cast_func_args)
+    )
 
     _print_dtype_changes(df, old_dtypes)
 
