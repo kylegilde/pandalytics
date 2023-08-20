@@ -46,11 +46,9 @@ def groupby_apply(
 pd.DataFrame.groupby_apply = groupby_apply
 
 
-def cast_dict_to_2_columns(a_dict: Dict,
-                           key_col: Optional[str] = 'key',
-                           value_col: Optional[str] = 'value'
-                           ) -> pd.DataFrame:
-
+def cast_dict_to_columns(
+    a_dict: Dict, key_col: Optional[str] = "key", value_col: Optional[str] = "value"
+) -> pd.DataFrame:
     """
 
     Cast a Dictionary into a 2-Column DataFrame
@@ -71,7 +69,7 @@ def cast_dict_to_2_columns(a_dict: Dict,
     return pd.Series(a_dict, name=value_col).rename_axis(key_col).reset_index()
 
 
-def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = '_'):
+def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = "_"):
     """
 
     Conncatenate MultiIndex Columns using the Separator String.
