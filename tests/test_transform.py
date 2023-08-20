@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pandalytics.transform import groupby_apply
+from pandalytics.transform import groupby_apply, cast_dict_to_columns
 
 df_grouped_metrics_expected = pd.DataFrame(
     {
@@ -143,3 +143,10 @@ def test_groupby_apply_method(df_pytest):
     )
 
     pd.testing.assert_frame_equal(df_grouped_metrics_expected, df_grouped_metrics)
+
+
+def test_cast_dict_to_columns():
+    d = dict(a=1, b=2)
+    df_expected = pd.DataFrame(dict(key=["a", "b"], value=[1, 2]))
+    df = cast_dict_to_columns(d)
+    pd.testing.assert_frame_equal(df, df_expected)
