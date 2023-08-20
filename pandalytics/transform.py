@@ -44,3 +44,51 @@ def groupby_apply(
 
 
 pd.DataFrame.groupby_apply = groupby_apply
+
+
+def cast_dict_to_2_columns(a_dict: Dict,
+                           key_col: Optional[str] = 'key',
+                           value_col: Optional[str] = 'value'
+                           ) -> pd.DataFrame:
+
+    """
+
+    Cast a Dictionary into a 2-Column DataFrame
+    The dictionary values should be scalars
+
+    Parameters
+    ----------
+    a_dict: dictionary containing values that are scalar
+    key_col: name of the column that will contain the dictionary's keys
+    value_col:  name of the column that will contain the dictionary's values
+
+    Returns
+    -------
+    a 2-column DataFrame
+
+    """
+
+    return pd.Series(a_dict, name=value_col).rename_axis(key_col).reset_index()
+
+
+def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = '_'):
+    """
+
+    Conncatenate MultiIndex Columns using the Separator String.
+    This useful after a df.pivot() is performed.
+    The smallest level is concatenated first.
+
+    Parameters
+    ----------
+    df: DataFrame
+    sep: a separator string
+
+    Returns
+    -------
+    a DataFrame with
+
+    """
+
+    df.columns = df.columns.to_series().apply(lambda x: sep.join(x[::-1])).values
+
+    return df
