@@ -6,6 +6,20 @@ import pandas as pd
 
 
 def _print_dtype_changes(df_new, old_dtypes):
+    """
+    Prints a DataFrame of dtype changes
+
+    Parameters
+    ----------
+    df_new: DataFrame with the new dtypes
+    old_dtypes: the Series that is contained in the df.dtypes attribute.
+
+    Returns
+    -------
+    None, It prints a DataFrame where the index is the column names.
+    It has two columns: old_dtype and new_dtype
+
+    """
     old_dtypes = old_dtypes.rename("old_dtype")
     new_dtypes = df_new.dtypes.rename("new_dtype")
 
@@ -19,8 +33,11 @@ def _print_dtype_changes(df_new, old_dtypes):
     n_changes = len(df_changes)
 
     print(
-        f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n", df_changes, "\n"
+        f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n"
     )
+
+    if n_changes > 0:
+        print(df_changes, "\n")
 
 
 @dataclass
@@ -209,10 +226,7 @@ def clean_dtypes(
     """
     Casts all the DataFrame dtypes to more optimal dtypes
 
-    - Casts all numeric-like non-numeric columns to numeric. convert_dtypes doesn't do this
-    - convert_dtypes method
-        - casts all integer-like float columns to Int64 and string-like object columns to string.
-        - if possible, it casts object columns to strings. It won't do this if there are Python objects in the column.
+    - cast_to_numeric casts all numeric-like non-numeric columns to numeric. (The convert_dtypes method doesn't do this.)
     - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like string & object columns, & cast them to datetime, cast_to_datetime does this.
     - cast_to_category casts any remaining columns (which probably contain arrays or non-scalar values like lists or dicts) to strings
 
