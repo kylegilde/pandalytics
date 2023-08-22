@@ -62,7 +62,7 @@ def cast_dict_to_columns(
 
     Returns
     -------
-    a 2-column DataFrame
+    a 2-column DataFrame with a key_col and value_col
 
     """
 
@@ -72,7 +72,7 @@ def cast_dict_to_columns(
 def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = "_"):
     """
 
-    Conncatenate MultiIndex Columns using the Separator String.
+    Concatenate MultiIndex Columns using the Separator String.
     This useful after a df.pivot() is performed.
     The smallest level is concatenated first.
 
@@ -83,10 +83,32 @@ def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = "_"):
 
     Returns
     -------
-    a DataFrame with
+    a DataFrame with 1 level of concatenated column names
 
     """
 
-    df.columns = df.columns.to_series().apply(lambda x: sep.join(x[::-1])).values
+    df.columns = (
+        df.columns.to_series().apply(lambda x: sep.join(map(str, x[::-1]))).values
+    )
 
     return df
+
+
+def sort_all_values(df: pd.DataFrame, *args, **kwargs) -> pd.DataFrame:
+    """
+
+    Sorts your Entire DataFrame by Each Column
+
+    Parameters
+    ----------
+    df: DataFrame
+    args: positional arguments passed to sort_values
+    kwargs: key-value pairs passed to the sort_values method
+
+    Returns
+    -------
+    a completely sorted DataFrame
+
+    """
+
+    return df.sort_values(df.columns.tolist(), *args, **kwargs)
