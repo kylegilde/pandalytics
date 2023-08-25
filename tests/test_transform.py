@@ -4,6 +4,7 @@ from pandalytics.transform import (
     groupby_apply,
     cast_dict_to_columns,
     flatten_column_names,
+    sort_all_values,
 )
 
 
@@ -160,14 +161,30 @@ def test_cast_dict_to_columns():
 def test_flatten_column_names():
     df_input = pd.DataFrame(np.arange(16).reshape(4, 4))
     df_input.columns = pd.MultiIndex.from_product([[1, 2], ["A", "B"]])
+
     df_expected = pd.DataFrame(
         {
             "A_1": [0, 4, 8, 12],
             "B_1": [1, 5, 9, 13],
             "A_2": [2, 6, 10, 14],
             "B_2": [3, 7, 11, 15],
-        }, dtype="int32"
+        },
+        dtype="int32",
     )
     df_test = flatten_column_names(df_input)
-    # pd.testing.assert_index_equal(df_test.columns, df_expected.columns)
+
     pd.testing.assert_frame_equal(df_test, df_expected)
+
+
+def test_sort_all_values():
+    df_input = pd.DataFrame(dict(a=list("zyx"), b=range(2, -1, -1)))
+    df_expected = pd.DataFrame(dict(a=list("xyz"), b=range(3)))
+    df_test = sort_all_values(df_input, ignore_index=True)
+
+    pd.testing.assert_frame_equal(df_test, df_expected), "sort_all_values did not work."
+
+    # Revert df_test back to df_input
+    df_revert = sort_all_values(df_test, ignore_index=True, ascending=False)
+    pd.testing.assert_frame_equal(
+        df_revert, df_input
+    ), "Descending sort_all_values did not work."
