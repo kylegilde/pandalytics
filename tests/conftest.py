@@ -3,11 +3,14 @@ import pandas as pd
 import pytest
 
 N_ROWS = 100
+SEED = 0
+NORMAL_LOC = 1_000
+NORMAL_SCALE = 200
 
 
 @pytest.fixture(scope="module")
 def df_pytest():
-    np.random.seed(0)
+    np.random.seed(SEED)
     df_pytest = pd.DataFrame(
         dict(
             cat_col=pd.Series(np.random.choice(list("AB"), N_ROWS), dtype="category"),
@@ -16,20 +19,37 @@ def df_pytest():
             date_col=pd.Series(
                 np.random.choice(pd.date_range("2023-06-27", periods=5), N_ROWS)
             ),
-            bool_col=pd.Series(np.random.choice([True, False], N_ROWS), dtype="object"),
-            int_col=pd.Series(np.random.randint(0, 1_000, N_ROWS), dtype=int),
-            int_col_2=pd.Series(np.random.randint(-1_000, 1_000, N_ROWS), dtype=int),
-            int_col_3=pd.Series(
-                np.random.randint(-1_000_000, 1_000_000, N_ROWS), dtype=int
+            binary_col=pd.Series(np.random.choice([1, 0], N_ROWS), dtype="Int8"),
+            int_col=pd.Series(np.random.randint(0, 1_000, N_ROWS), dtype="Int16"),
+            int_col_2=pd.Series(
+                np.random.randint(-1_000, 1_000, N_ROWS), dtype="Int16"
             ),
-            float_col=pd.Series(np.random.uniform(0, 1, N_ROWS), dtype=float),
-            float_col_2=pd.Series(np.random.uniform(-1, 1, N_ROWS), dtype=float),
+            int_col_3=pd.Series(
+                np.random.randint(-1_000_000, 1_000_000, N_ROWS), dtype="Int32"
+            ),
+            float_col=pd.Series(np.random.uniform(0, 1, N_ROWS), dtype="Float32"),
+            float_col_2=pd.Series(np.random.uniform(-1, 1, N_ROWS), dtype="Float32"),
             float_col_3=pd.Series(
-                np.random.uniform(-1_000, 1_000, N_ROWS), dtype=float
+                np.random.uniform(-1_000, 1_000, N_ROWS), dtype="Float32"
             ),
         )
     )
 
-    df_pytest.mask(np.random.random(df_pytest.shape) < 0.1, inplace=True)
+    # Throw in some NaNs
+    mask = np.random.random(df_pytest.shape) < 0.1
+    df_pytest.mask(mask, inplace=True)
+
+    # Create some columsns without NaNs
+    df_pytest["bool_col"] = pd.Series(
+        np.random.choice([True, False], N_ROWS), dtype="bool"
+    )
+    df_pytest["normal_1"] = pd.Series(
+        np.random.normal(loc=NORMAL_LOC, scale=NORMAL_SCALE, size=N_ROWS),
+        dtype="float32",
+    )
+    df_pytest["normal_2"] = pd.Series(
+        np.random.normal(loc=NORMAL_LOC, scale=NORMAL_SCALE, size=N_ROWS),
+        dtype="float32",
+    )
 
     return df_pytest
