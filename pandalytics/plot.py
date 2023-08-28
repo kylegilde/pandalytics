@@ -79,14 +79,20 @@ def _get_y_values(kwarg_dict: Dict) -> pd.Series:
 def _infer_yaxes_tickformat(title, y_values, small_std_threshold) -> str:
     """
 
+    Infer if the tickformat should be expressed as dollars or percentages and how many
+    decimal it should use.
+
     Parameters
     ----------
-    title
-    y_values
-    small_std_threshold
+    title: The plot's title is used to see if the values should be formatted
+        as percentages or dollars.
+    y_values: the plot's y values
+    small_std_threshold: if the y_values standard deviation is smaller than this,
+        use fewer decimal places.
 
     Returns
     -------
+    the tickformat string
 
     """
     title_lower = title.lower()
@@ -120,10 +126,8 @@ def _create_update_dicts(
 
     Parameters
     ----------
-    update_layout_dict
-    update_xaxes_dict
-    update_yaxes_dict
-    update_traces_dict
+    update_layout_dict, update_xaxes_dict, update_yaxes_dict & update_traces_dict:
+        key-value pairs passed to the corresponding method
 
     Returns
     -------
@@ -144,21 +148,23 @@ def _create_update_dicts(
     return update_dicts
 
 
-def _add_new_keys(existing_dict: Dict, new_dict: Dict) -> None:
+def _add_new_keys(source_dict: Dict, target_dict: Dict) -> None:
     """
+    If the key does not exist in the target dict, add the key-value from the source dict.
 
     Parameters
     ----------
-    existing_dict
-    new_dict
+    source_dict: the source of the new key-values
+    target_dict: the dict to update
 
     Returns
     -------
+    None
 
     """
-    for k, v in new_dict.items():
-        if k not in existing_dict:
-            existing_dict.update({k: v})
+    for k, v in source_dict.items():
+        if k not in target_dict:
+            target_dict.update({k: v})
 
     return None
 
@@ -167,22 +173,23 @@ def _update_all_dicts(
     awesome_defaults: Dict, update_dicts: Dict, kwarg_dict: Dict
 ) -> None:
     """
+    Update the update_dicts and kwarg_dict using awesome_defaults dict
 
     Parameters
     ----------
-    awesome_defaults
-    update_dicts
-    kwarg_dict
+    awesome_defaults: source of the default values
+    update_dicts: target to update
+    kwarg_dict:target to update
 
     Returns
     -------
-
+    None
     """
     for k, v in awesome_defaults.items():
         if k == "kwargs":
-            _add_new_keys(kwarg_dict, v)
+            _add_new_keys(v, kwarg_dict)
         elif k in update_dicts:
-            _add_new_keys(update_dicts[k], v)
+            _add_new_keys(v, update_dicts[k])
 
     return None
 
@@ -201,11 +208,12 @@ def _create_figure(
     ----------
     px_fig_func: either px.bar or px.line
     update_layout_dict, update_xaxes_dict, update_yaxes_dict & update_traces_dict:
-    key-value pairs passed to the corresponding method
+        key-value pairs passed to the corresponding method
     kwargs: key-value pairs to pass to px_fig_func
 
     Returns
     -------
+    a plot
 
     """
     return (
@@ -240,10 +248,8 @@ def plot_line_plot(
     infer_yaxes_tickformat: should the y-axis tickformat be determined via logic?
     zero_line_threshold: a dotted line will be drawn if any value in y is below this threshold.
         Set to None to turn it off.
-
     update_layout_dict, update_xaxes_dict, update_yaxes_dict & update_traces_dict:
-    key-value pairs passed to the corresponding method
-
+        key-value pairs passed to the corresponding method
     kwargs: key-value pairs to pass to px.line
 
     Returns
@@ -269,7 +275,7 @@ def plot_line_plot(
     if use_awesome_defaults:
         # update the values if the key does not exist
         _update_all_dicts(LINE_PLOT_AWESOME_DEFAULTS, update_dicts, kwargs)
-        # _add_new_keys(update_traces_dict, LINE_PLOT_AWESOME_DEFAULTS)
+        # _add_new_keys(LINE_PLOT_AWESOME_DEFAULTS, update_traces_dict)
 
     fig = _create_figure(px.line, **update_dicts, **kwargs)
 
@@ -304,7 +310,7 @@ def plot_bar_plot(
         You can choose to specify some of them and not others
 
     update_layout_dict, update_xaxes_dict, update_yaxes_dict & update_traces_dict:
-    key-value pairs passed to the corresponding method
+        key-value pairs passed to the corresponding method
 
     kwargs: key-value pairs to pass to px.bar
 
@@ -383,132 +389,3 @@ plot_many_line_plots = partial(plot_many_plots, plot_func=plot_line_plot)
 
 # specific instance of plot_many_plots for line plots
 plot_many_bar_plots = partial(plot_many_plots, plot_func=plot_bar_plot)
-
-
-@dataclass
-class FeatureImportancePlot:
-    """
-
-    Parameters
-    ----------
-    features
-    importance_values
-    max_scale
-    n_decimals_displayed
-    str_pad_width
-
-    Returns
-    -------
-
-    """
-
-    features: List
-    importance_values: List
-    max_scale: bool = True
-    n_decimals_displayed: int = 1
-    str_pad_width: int = 15
-
-    def transform(self):
-        self.df_importance: pd.DataFrame = (
-            pd.Series(self.importance_values, index=self.features, name="value")
-            .rename_axis("feature")
-            .reset_index()
-            .sort_values(["value", "feature"], ignore_index=True)
-            .assign(
-                ranking=lambda _df: _df["value"]
-                .rank(method="dense", ascending=False)
-                .astype(int)
-            )
-            # add the rank to the feature name
-            .assign(
-                ranked_feature=lambda _df: _df.ranking.astype("string")
-                + ".  "
-                + _df.feature.astype("string").str.pad(width=self.str_pad_width)
-            )
-        )
-
-        if self.max_scale:
-            max_value = self.df_importance["value"].max()
-            self.df_importance["value"] = (
-                self.df_importance["value"].div(max_value).mul(100)
-            )
-
-        self.df_importance["text"] = self.df_importance["value"].round(
-            self.n_decimals_displayed
-        )
-
-        self.n_features = len(self.df_importance)
-
-        return self.df_importance
-
-    def plot(
-        self,
-        top_n_features=None,
-        height_per_feature=25,
-        width: int = 750,
-        yaxes_tickfont_family="Courier New, monospace",
-        yaxes_tickfont_size=15,
-        **kwargs,
-    ):
-        """
-
-        Plot the Feature Names & Importances
-
-        Parameters
-        ----------
-        top_n_features : the number of features to plot, default is 100
-        max_scale : Should the importance values be scaled by the maximum value & mulitplied by 100?  Default is True.
-        n_decimals_displayed : How many decimal places should be displayed. Default is 1.
-        height_per_feature : if height is None, the plot height is calculated by top_n_features * height_per_feature.
-        This allows all the features enough space to be displayed
-        width :  the width of the plot
-        str_pad_width : When rank_features=True, this number of spaces to add between the rank integer and feature name.
-            This will enable the rank integers to line up with each other for easier reading.
-            Default is 15. If you have long feature names, you can increase this number to make the integers line up more.
-            It can also be set to 0.
-        yaxes_tickfont_family : the font for the feature names. Default is Courier New.
-        yaxes_tickfont_size : the font size for the feature names. Default is 15.
-
-        Returns
-        -------
-        plot
-
-        """
-
-        if not hasattr(self, "df_importance"):
-            self.transform()
-
-        df_plot = self.df_importance.copy()
-
-        # Create a title if one was not provided
-        create_title = "title" not in kwargs
-        if create_title:
-            kwargs["title"] = "All Feature Importances"
-
-        if "height" not in kwargs:
-            kwargs["height"] = max(self.n_features * height_per_feature, 400)
-
-        # If you have a lot of features, you may want to show only the top ones.
-        if isinstance(top_n_features, int) and self.n_features > top_n_features:
-            df_plot = df_plot[lambda df: df.ranking.le(top_n_features)]
-            if create_title:
-                kwargs[
-                    "title"
-                ] = f"Top {top_n_features} (of {self.n_features}) Feature Importances"
-
-        # create the plot
-        return (
-            px.bar(
-                df_plot,
-                x="value",
-                y="ranked_feature",
-                text="text",
-                width=width,
-                **kwargs,
-            )
-            .update_layout(title_x=0.5, showlegend=False)
-            .update_yaxes(
-                tickfont=dict(family=yaxes_tickfont_family, size=yaxes_tickfont_size),
-                title="",
-            )
-        )
