@@ -14,7 +14,7 @@ from sklearn.metrics import (
 )
 
 
-def use_metric_abbreviations(df, metric_col: Optional[str] = "metric") -> None:
+def _use_metric_abbreviations(df, metric_col: Optional[str] = "metric") -> None:
     """
 
     Parameters
@@ -28,7 +28,7 @@ def use_metric_abbreviations(df, metric_col: Optional[str] = "metric") -> None:
     """
     df[metric_col] = (
         df[metric_col]
-        .str.extract("((?<=\().+(?=\)))", expand=False)
+        .str.extract(r"((?<=\().+(?=\)))", expand=False)
         .fillna(df[metric_col])
     )
 
@@ -64,7 +64,6 @@ def get_regression_metrics(
     Returns
     -------
     A 2-column DataFrame containing the metric_col and value_col
-
     """
 
     dollar_sign = " $" if use_dollar_sign else ""
@@ -99,7 +98,7 @@ def get_regression_metrics(
     )
 
     if use_abbreviations:
-        use_metric_abbreviations(df_metrics, metric_col=metric_col)
+        _use_metric_abbreviations(df_metrics, metric_col=metric_col)
 
     return df_metrics
 
