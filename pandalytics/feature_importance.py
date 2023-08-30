@@ -68,7 +68,7 @@ class FeatureImportancePlot:
         top_n_features: Optional[int] = None,
         height_per_feature: Optional[int] = 25,
         width: Optional[int] = 750,
-        yaxes_tickfont_family: str = "Courier New, monospace",
+        yaxes_tickfont_family: Optional[str] = "Courier New, monospace",
         yaxes_tickfont_size: Optional[int] = 15,
         **kwargs,
     ) -> go.Figure:
@@ -122,6 +122,7 @@ class FeatureImportancePlot:
                 width=width,
                 **kwargs,
             )
+            # center the title and do not show the legend
             .update_layout(title_x=0.5, showlegend=False)
             .update_yaxes(
                 tickfont=dict(family=yaxes_tickfont_family, size=yaxes_tickfont_size),
