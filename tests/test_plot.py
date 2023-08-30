@@ -1,7 +1,6 @@
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from pandalytics.plot import plot_line_plot, plot_bar_plot, FeatureImportancePlot
+from pandalytics.plot import plot_line_plot, plot_bar_plot
 
 
 def test_add_new_keys():
@@ -23,12 +22,3 @@ def test_plot_bar_plot(df_pytest):
     fig = plot_bar_plot(data_frame=df, x="cat", y="value")
 
     assert isinstance(fig, go.Figure), "plot_bar_plot did NOT return a go.Figure."
-
-
-def test_featureimportanceplot():
-    fip = FeatureImportancePlot(list("abcd"), range(4))
-    fig = fip.plot()
-
-    assert isinstance(
-        fig, go.Figure
-    ), "The FeatureImportancePlot did NOT return a go.Figure."
