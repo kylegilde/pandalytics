@@ -5,7 +5,6 @@ from functools import partial
 from typing import Optional, Union, Dict, Callable, List
 import re
 import warnings
-from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
