@@ -5,7 +5,7 @@ import pandas as pd
 from pandalytics.metrics import (
     get_regression_metrics,
     create_regression_metrics,
-    use_metric_abbreviations,
+    _use_metric_abbreviations,
 )
 
 df_expected = pd.DataFrame(
