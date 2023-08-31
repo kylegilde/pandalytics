@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+
 @dataclass
 class FeatureImportancePlot:
     """
@@ -24,6 +25,7 @@ class FeatureImportancePlot:
     ----------
     df_importance: Contains columns feature, value, ranking, ranked_feature & text
     """
+
     features: List
     importance_values: List
     max_scale: Optional[bool] = True
@@ -123,8 +125,7 @@ class FeatureImportancePlot:
                 **kwargs,
             )
             # center the title and do not show the legend
-            .update_layout(title_x=0.5, showlegend=False)
-            .update_yaxes(
+            .update_layout(title_x=0.5, showlegend=False).update_yaxes(
                 tickfont=dict(family=yaxes_tickfont_family, size=yaxes_tickfont_size),
                 title="",
             )
