@@ -1,10 +1,16 @@
 import pandas as pd
 import plotly.graph_objects as go
-from pandalytics.plot import plot_line_plot, plot_bar_plot
+from pandalytics.plot import plot_line_plot, plot_bar_plot, _add_new_keys
 
 
 def test_add_new_keys():
-    pass
+    d1 = dict(a=1, b=2)
+    d2 = dict(a=2, b=1, c=3)
+    expected = dict(a=1, b=2, c=3)
+    _add_new_keys(d2, d1)
+
+    assert expected == d1, "_add_new_keys did not return the correct results"
+
 
 
 def test_infer_yaxes_tickformat():
