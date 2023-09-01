@@ -27,10 +27,10 @@ def df_pytest():
             int_col_3=pd.Series(
                 np.random.randint(-1_000_000, 1_000_000, N_ROWS), dtype="Int32"
             ),
-            float_col=pd.Series(np.random.uniform(0, 1, N_ROWS), dtype="Float32"),
-            float_col_2=pd.Series(np.random.uniform(-1, 1, N_ROWS), dtype="Float32"),
+            float_col=pd.Series(np.random.uniform(0, 1, N_ROWS), dtype="Float64"),
+            float_col_2=pd.Series(np.random.uniform(-1, 1, N_ROWS), dtype="Float64"),
             float_col_3=pd.Series(
-                np.random.uniform(-1_000, 1_000, N_ROWS), dtype="Float32"
+                np.random.uniform(-1_000, 1_000, N_ROWS), dtype="Float64"
             ),
         )
     )
@@ -39,17 +39,20 @@ def df_pytest():
     mask = np.random.random(df_pytest.shape) < 0.1
     df_pytest.mask(mask, inplace=True)
 
-    # Create some columsns without NaNs
+    # Create some columns without NaNs
     df_pytest["bool_col"] = pd.Series(
         np.random.choice([True, False], N_ROWS), dtype="bool"
     )
     df_pytest["normal_1"] = pd.Series(
         np.random.normal(loc=NORMAL_LOC, scale=NORMAL_SCALE, size=N_ROWS),
-        dtype="float32",
+        dtype="Float64",
     )
     df_pytest["normal_2"] = pd.Series(
         np.random.normal(loc=NORMAL_LOC, scale=NORMAL_SCALE, size=N_ROWS),
-        dtype="float32",
+        dtype="Float64",
     )
+
+    df_pytest["date_col_2"] = pd.date_range("2023-06-27", periods=N_ROWS, tz="UTC")
+    df_pytest["date_col_3"] = pd.date_range("2020-06-27", "2023-06-27", periods=N_ROWS)
 
     return df_pytest
