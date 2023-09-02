@@ -1,7 +1,6 @@
 from typing import Optional, List, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
 
@@ -32,9 +31,7 @@ def _print_dtype_changes(df_new, old_dtypes):
 
     n_changes = len(df_changes)
 
-    print(
-        f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n"
-    )
+    print(f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
 
     if n_changes > 0:
         print(df_changes, "\n")
