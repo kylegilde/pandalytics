@@ -12,7 +12,6 @@ def test_add_new_keys():
     assert expected == d1, "_add_new_keys did not return the correct results"
 
 
-
 def test_infer_yaxes_tickformat():
     pass
 
