@@ -2,7 +2,8 @@
 Contains custom plotting functions
 """
 from functools import partial
-from typing import Optional, Union, Dict, Callable, List
+from typing import Optional, Union, Dict, Callable
+from numpy.typing import ArrayLike
 import re
 import warnings
 
@@ -50,15 +51,16 @@ BAR_PLOT_AWESOME_DEFAULTS = dict(
 )
 
 
-def _get_y_values(kwarg_dict: Dict) -> pd.Series:
+def _get_y_values(kwarg_dict: Dict) -> ArrayLike:
     """
     Get the y values from the DataFrame or the y argument
     Parameters
     ----------
-    kwarg_dict
+    kwarg_dict: the plot's kwargs dict
 
     Returns
     -------
+    an array of y values
 
     """
     if "data_frame" not in kwarg_dict or "y" not in kwarg_dict or "x" not in kwarg_dict:
@@ -75,7 +77,11 @@ def _get_y_values(kwarg_dict: Dict) -> pd.Series:
     return y
 
 
-def _infer_yaxes_tickformat(title, y_values, small_std_threshold) -> str:
+def _infer_yaxes_tickformat(
+    y_values: ArrayLike,
+    small_std_threshold: Union[float, int],
+    title: Optional[str] = "",
+) -> str:
     """
 
     Infer if the tickformat should be expressed as dollars or percentages and how many
@@ -101,7 +107,7 @@ def _infer_yaxes_tickformat(title, y_values, small_std_threshold) -> str:
     # Determine if the metric is supposed to be percent-formatted
     is_percentage = bool(re.search("(%|percent|pct|mape)", title_lower))
     # Is there a small enough range that requires decimals in the numeric formatting?
-    is_small_std = np.std(y_values) < small_std_threshold
+    is_small_std = np.std(y_values) <= small_std_threshold
 
     # Set the appropriate format: dollars, percentages or fractional formats
     if is_dollars:
@@ -267,7 +273,7 @@ def plot_line_plot(
     ):
         title: str = kwargs.get("title", "")
         update_dicts["update_yaxes_dict"]["tickformat"]: str = _infer_yaxes_tickformat(
-            title, y_values, small_std_threshold
+            y_values, small_std_threshold, title
         )
 
     # Use some or all of the awesome defaults
@@ -386,5 +392,5 @@ def plot_many_plots(
 # specific instance of plot_many_plots for line plots
 plot_many_line_plots = partial(plot_many_plots, plot_func=plot_line_plot)
 
-# specific instance of plot_many_plots for line plots
+# specific instance of plot_many_plots for bar plots
 plot_many_bar_plots = partial(plot_many_plots, plot_func=plot_bar_plot)
