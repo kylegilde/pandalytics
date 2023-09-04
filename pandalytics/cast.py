@@ -32,7 +32,7 @@ def _print_dtype_changes(df_new, old_dtypes):
 
     n_changes = len(df_changes)
 
-    print(f"\n{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
+    print(f"{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
 
     if n_changes > 0:
         print(df_changes, "\n")
@@ -90,9 +90,11 @@ class DtypeCasting:
                 coerce_func_kwargs = dict(errors=self.errors)
                 if self.coerce_func is pd.to_numeric:
                     coerce_func_kwargs["downcast"] = self.downcast
-                self.coerce_func = partial(self.coerce_func, **coerce_func_kwargs)
+                final_func = partial(self.coerce_func, **coerce_func_kwargs)
+            else:
+                final_func = self.coerce_func
 
-            df_subset = df_subset.apply(self.coerce_func).select_dtypes(self.new_dtype)
+            df_subset = df_subset.apply(final_func).select_dtypes(self.new_dtype)
         else:
             df_subset = df_subset.astype(self.new_dtype, errors=self.errors)
 
@@ -101,6 +103,12 @@ class DtypeCasting:
         if casted_cols:
             df[casted_cols] = df_subset
             if self.verbose:
+                coersion_func = (
+                    self.coerce_func.__name__
+                    if self.coerce_func
+                    else f"astype({self.new_dtype})"
+                )
+                print(f"Ran {coersion_func}")
                 _print_dtype_changes(df, old_dtypes)
 
         return df
@@ -349,13 +357,14 @@ def clean_dtypes(
     old_dtypes = df.dtypes
 
     df = (
+        # TODO: create convert_dtypes wrapper
         df.convert_dtypes()
         .pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
         .pipe(cast_to_datetime, **cast_func_args)
         .pipe(cast_to_boolean)
         .pipe(cast_to_category, **cast_func_args)
     )
-
+    print("Ran clean_dtypes")
     _print_dtype_changes(df, old_dtypes)
 
     return df
