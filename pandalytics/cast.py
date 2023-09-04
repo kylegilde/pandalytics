@@ -1,5 +1,6 @@
 from typing import Optional, List, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
+from functools import partial
 
 import pandas as pd
 
@@ -85,13 +86,13 @@ class DtypeCasting:
         df_subset = df_subset.select_dtypes(self.dtypes_to_check)
 
         if self.coerce_func:
-            coerce_func_kwargs = dict(errors=self.errors)
-            if self.coerce_func is pd.to_numeric:
-                coerce_func_kwargs["downcast"] = self.downcast
+            if self.coerce_func is pd.to_numeric or self.coerce_func is pd.to_datetime:
+                coerce_func_kwargs = dict(errors=self.errors)
+                if self.coerce_func is pd.to_numeric:
+                    coerce_func_kwargs["downcast"] = self.downcast
+                self.coerce_func = partial(self.coerce_func, **coerce_func_kwargs)
 
-            df_subset = df_subset.apply(
-                self.coerce_func, **coerce_func_kwargs
-            ).select_dtypes(self.new_dtype)
+            df_subset = df_subset.apply(self.coerce_func).select_dtypes(self.new_dtype)
         else:
             df_subset = df_subset.astype(self.new_dtype, errors=self.errors)
 
@@ -138,6 +139,96 @@ def cast_to_numeric(
         coerce_func=pd.to_numeric,
         errors=errors,
         downcast=downcast,
+        verbose=verbose,
+    ).cast(df, cols_to_check=cols_to_check)
+
+
+def to_boolean(s: pd.Series) -> pd.Series:
+    """
+    Coerce a non-boolean Series to a boolean Series if possible
+
+    Parameters
+    ----------
+
+    s: Pandas Series
+    check_numeric: Should numeric columns containing only 0 and 1 be cast to boolean?
+
+    Returns
+    -------
+    a coerced Pandas bool Series if possible or the original Series
+    """
+    if not pd.api.types.is_bool_dtype(s):
+        s_values = set(s)
+        if len(s_values) == 2:
+            if s_values == {True, False}:
+                s = s.astype("boolean")
+            elif s_values == {"True", "False"}:
+                s = s.eq("True")
+    return s
+
+
+def cast_to_boolean(
+    df: pd.DataFrame,
+    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+        "object",
+        "string",
+    ),
+    cols_to_check: Optional[Union[List, Tuple]] = None,
+    verbose: Optional[bool] = True,
+):
+    """
+    Cast columns to numeric dtypes
+
+    Parameters
+    ----------
+    df: DataFrame
+    cols_to_check: a subset of columns to check.
+    dtypes_to_check: the dtypes that should be checked.
+    errors: How the errors should be handled
+    downcast: The smallest numerical dtype to attempt when downcasting
+    verbose: Should the dtype changes be printed?
+
+    Returns
+    -------
+    A DataFrame with numeric dtypes
+    """
+    return DtypeCasting(
+        dtypes_to_check=dtypes_to_check,
+        new_dtype="boolean",
+        coerce_func=to_boolean,
+        verbose=verbose,
+    ).cast(df, cols_to_check=cols_to_check)
+
+
+def cast_to_category(
+    df: pd.DataFrame,
+    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+        "object",
+        "string",
+    ),
+    cols_to_check: Optional[Union[List, Tuple]] = None,
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
+    verbose: Optional[bool] = True,
+):
+    """
+    Cast columns to categorical dtypes
+
+    Parameters
+    ----------
+    df: DataFrame
+    cols_to_check: a subset of columns to check.
+    dtypes_to_check: the dtypes that should be checked.
+    errors: How the errors should be handled
+    verbose: Should the dtype changes be printed?
+
+    Returns
+    -------
+    A DataFrame with categorical dtypes
+    """
+    return DtypeCasting(
+        dtypes_to_check=dtypes_to_check,
+        new_dtype="category",
+        errors=errors,
         verbose=verbose,
     ).cast(df, cols_to_check=cols_to_check)
 
@@ -223,9 +314,16 @@ def clean_dtypes(
     """
     Casts all the DataFrame dtypes to more optimal dtypes
 
-    - cast_to_numeric casts all numeric-like non-numeric columns to numeric. (The convert_dtypes method doesn't do this.)
-    - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like string & object columns, & cast them to datetime, cast_to_datetime does this.
-    - cast_to_category casts any remaining columns (which probably contain arrays or non-scalar values like lists or dicts) to strings
+    - The convert_dtypes method will convert numeric and datetime object columns to
+        numeric and datetime dtypes, but not for numbers and datetimes that are being
+        stored as strings
+    - cast_to_numeric casts all numeric-like non-numeric columns to numeric.
+        (The convert_dtypes method doesn't do this.)
+    - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like
+        strings, cast_to_datetime does this.
+    - cast_to_boolean casts bool object columns and "True"/"False" string values
+        to the boolean dtype.
+    - cast_to_category casts any remaining columns to categories
 
     Parameters
     ----------
@@ -251,8 +349,10 @@ def clean_dtypes(
     old_dtypes = df.dtypes
 
     df = (
-        df.pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
+        df.convert_dtypes()
+        .pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
         .pipe(cast_to_datetime, **cast_func_args)
+        .pipe(cast_to_boolean)
         .pipe(cast_to_category, **cast_func_args)
     )
 
