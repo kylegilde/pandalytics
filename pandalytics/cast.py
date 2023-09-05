@@ -86,11 +86,12 @@ class DtypeCasting:
         df_subset = df_subset.select_dtypes(self.dtypes_to_check)
 
         if self.coerce_func:
-            if self.coerce_func is pd.to_numeric or self.coerce_func is pd.to_datetime:
-                coerce_func_kwargs = dict(errors=self.errors)
-                if self.coerce_func is pd.to_numeric:
-                    coerce_func_kwargs["downcast"] = self.downcast
-                final_func = partial(self.coerce_func, **coerce_func_kwargs)
+            if self.coerce_func is pd.to_numeric:
+                final_func = partial(
+                    self.coerce_func, errors=self.errors, downcast=self.downcast
+                )
+            elif self.coerce_func is pd.to_datetime:
+                final_func = partial(self.coerce_func, errors=self.errors)
             else:
                 final_func = self.coerce_func
 
@@ -157,9 +158,7 @@ def to_boolean(s: pd.Series) -> pd.Series:
 
     Parameters
     ----------
-
     s: Pandas Series
-    check_numeric: Should numeric columns containing only 0 and 1 be cast to boolean?
 
     Returns
     -------
@@ -183,6 +182,7 @@ def cast_to_boolean(
     ),
     cols_to_check: Optional[Union[List, Tuple]] = None,
     verbose: Optional[bool] = True,
+    **kwargs
 ):
     """
     Cast columns to numeric dtypes
@@ -193,12 +193,12 @@ def cast_to_boolean(
     cols_to_check: a subset of columns to check.
     dtypes_to_check: the dtypes that should be checked.
     errors: How the errors should be handled
-    downcast: The smallest numerical dtype to attempt when downcasting
     verbose: Should the dtype changes be printed?
+    kwargs: Just here for compatibility. Not currently in use.
 
     Returns
     -------
-    A DataFrame with numeric dtypes
+    A DataFrame with boolean dtypes if possible
     """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
@@ -361,7 +361,7 @@ def clean_dtypes(
         df.convert_dtypes()
         .pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
         .pipe(cast_to_datetime, **cast_func_args)
-        .pipe(cast_to_boolean)
+        .pipe(cast_to_boolean, **cast_func_args)
         .pipe(cast_to_category, **cast_func_args)
     )
     print("Ran clean_dtypes")
