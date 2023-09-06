@@ -1,11 +1,26 @@
 from typing import Optional, List, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
 from functools import partial
+import humanize
 
 import pandas as pd
 
 
-def _print_dtype_changes(df_new, old_dtypes):
+def get_memory_usage(df: pd.DataFrame) -> str:
+    """
+    Get the size of the DataFrame in human-readable format
+    Parameters
+    ----------
+    df: DataFrame
+
+    Returns
+    -------
+    string
+    """
+    return humanize.naturalsize(df.memory_usage(deep=True).sum())
+
+
+def _print_dtype_changes(df_new, old_dtypes, old_size: Optional[str] = None):
     """
     Prints a DataFrame of dtype changes
 
@@ -36,6 +51,8 @@ def _print_dtype_changes(df_new, old_dtypes):
 
     if n_changes > 0:
         print(df_changes, "\n")
+        if old_size:
+            print(f"Resized from {old_size} to {get_memory_usage(df_new)}")
 
 
 @dataclass
@@ -77,6 +94,7 @@ class DtypeCasting:
         A DataFrame with new dtypes
         """
         old_dtypes = df.dtypes
+        old_size = get_memory_usage(df)
 
         df_subset = df
 
@@ -110,7 +128,7 @@ class DtypeCasting:
                     else f"astype({self.new_dtype})"
                 )
                 print(f"Ran {coersion_func}")
-                _print_dtype_changes(df, old_dtypes)
+                _print_dtype_changes(df, old_dtypes, old_size)
 
         return df
 
@@ -182,7 +200,7 @@ def cast_to_boolean(
     ),
     cols_to_check: Optional[Union[List, Tuple]] = None,
     verbose: Optional[bool] = True,
-    **kwargs
+    **kwargs,
 ):
     """
     Cast columns to numeric dtypes
@@ -355,6 +373,7 @@ def clean_dtypes(
     )
 
     old_dtypes = df.dtypes
+    old_size = get_memory_usage(df)
 
     df = (
         # TODO: create convert_dtypes wrapper
@@ -365,13 +384,6 @@ def clean_dtypes(
         .pipe(cast_to_category, **cast_func_args)
     )
     print("Ran clean_dtypes")
-    _print_dtype_changes(df, old_dtypes)
+    _print_dtype_changes(df, old_dtypes, old_size)
 
     return df
-
-
-# def get_memory_usage(df):
-#     # ! pip install humanize
-#     # import humanize
-#     # from numerize import numerize
-#     return humanize.naturalsize(df.memory_usage(deep=True).sum())
