@@ -5,6 +5,7 @@ from pandalytics.transform import (
     cast_dict_to_columns,
     flatten_column_names,
     sort_all_values,
+    drop_single_value_cols,
 )
 
 
@@ -188,3 +189,15 @@ def test_sort_all_values():
     pd.testing.assert_frame_equal(
         df_revert, df_input
     ), "Descending sort_all_values did not work."
+
+
+def test_drop_single_value_cols(df_pytest):
+    df_input = df_pytest.copy()
+    df_input[["a", "b", "c", "d", "e"]] = pd.NA, pd.Timestamp("2000-01-01"), 1.0, "hello", "bye"
+    df_input["e"] = df_input["e"].astype("category")
+
+    expected_columns = df_pytest.columns
+    test_columns = drop_single_value_cols(df_input).columns
+
+    pd.testing.assert_index_equal(test_columns, expected_columns)
+

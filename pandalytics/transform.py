@@ -8,7 +8,7 @@ def groupby_apply(
     apply_func: Callable,
     observed: Optional[bool] = True,
     dropna: Optional[bool] = False,
-    **kwargs
+    **kwargs,
 ) -> pd.DataFrame:
     """
 
@@ -112,3 +112,24 @@ def sort_all_values(df: pd.DataFrame, *args, **kwargs) -> pd.DataFrame:
     """
 
     return df.sort_values(df.columns.tolist(), *args, **kwargs)
+
+
+def drop_single_value_cols(df: pd.DataFrame, dropna: bool = False) -> pd.DataFrame:
+    """
+    Drop all the columns w/ only a single value
+
+    :param df: DataFrame
+    :param dropna: should NAs be dropped before counting?
+
+    :return: DataFrame
+    """
+    single_value_cols = (
+        df.nunique(dropna=dropna).loc[lambda x: x == 1].index.to_series().tolist()
+    )
+
+    if single_value_cols:
+        print(
+            f'\n\nDropping these single value columns:\n{",".join(single_value_cols)}\n\n'
+        )
+
+    return df.drop(columns=single_value_cols)
