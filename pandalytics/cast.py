@@ -145,7 +145,7 @@ def cast_to_numeric(
     verbose: Optional[bool] = True,
 ):
     """
-    Cast columns to numeric dtypes
+    Cast / Coerce columns to numeric dtypes
 
     Parameters
     ----------
