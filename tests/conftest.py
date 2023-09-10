@@ -41,7 +41,7 @@ def df_pytest():
 
     # Create some columns without NaNs
     df_pytest["bool_col"] = pd.Series(
-        np.random.choice([True, False], N_ROWS), dtype="bool"
+        np.random.choice([True, False], N_ROWS), dtype="boolean"
     )
     df_pytest["normal_1"] = pd.Series(
         np.random.normal(loc=NORMAL_LOC, scale=NORMAL_SCALE, size=N_ROWS),
