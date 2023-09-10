@@ -6,6 +6,8 @@ from pandalytics.transform import (
     flatten_column_names,
     sort_all_values,
     drop_single_value_cols,
+    change_display,
+    format_percentage,
 )
 
 
@@ -193,7 +195,13 @@ def test_sort_all_values():
 
 def test_drop_single_value_cols(df_pytest):
     df_input = df_pytest.copy()
-    df_input[["a", "b", "c", "d", "e"]] = pd.NA, pd.Timestamp("2000-01-01"), 1.0, "hello", "bye"
+    df_input[["a", "b", "c", "d", "e"]] = (
+        pd.NA,
+        pd.Timestamp("2000-01-01"),
+        1.0,
+        "hello",
+        "bye",
+    )
     df_input["e"] = df_input["e"].astype("category")
 
     expected_columns = df_pytest.columns
@@ -201,3 +209,50 @@ def test_drop_single_value_cols(df_pytest):
 
     pd.testing.assert_index_equal(test_columns, expected_columns)
 
+
+def test_change_display():
+    change_display()
+    assert pd.get_option("display.min_rows") == 25
+    assert pd.get_option("display.max_rows") == 50
+    assert pd.get_option("display.max_columns") == 100
+    assert pd.get_option("max_colwidth") == 400
+    assert pd.get_option("display.width") == 1000
+
+    format_string = "{:,.%df}" % 4
+    assert pd.get_option("display.float_format")(
+        0.0000000000001
+    ) == format_string.format(0.0000000000001)
+
+
+def test_format_percentage():
+    s_input = pd.Series(
+        [
+            0.36111968691526775,
+            -0.7542024178311975,
+            -1.006893731921199,
+            -0.8882585711641657,
+            -0.7263882615576498,
+            0.9157907845736917,
+            0.27678388892377814,
+            1.1561438902373338,
+            1.3207863193402076,
+            1.3717394372051284,
+        ]
+    )
+    s_expected = pd.Series(
+        [
+            "36.11%",
+            "-75.42%",
+            "-100.69%",
+            "-88.83%",
+            "-72.64%",
+            "91.58%",
+            "27.68%",
+            "115.61%",
+            "132.08%",
+            "137.17%",
+        ],
+        dtype="string",
+    )
+    s_test = format_percentage(s_input)
+    pd.testing.assert_series_equal(s_test, s_expected)

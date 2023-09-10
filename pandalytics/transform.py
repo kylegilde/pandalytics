@@ -133,3 +133,72 @@ def drop_single_value_cols(df: pd.DataFrame, dropna: bool = False) -> pd.DataFra
         )
 
     return df.drop(columns=single_value_cols)
+
+
+def format_percentage(s: pd.Series, n_decimals: Optional[int] = 2) -> pd.Series:
+    """
+    Formats a numeric Series as a percentage string
+    Parameters
+    ----------
+    s: numeric Series
+    n_decimals: the number of decimal places to retain in the percentage
+
+    Returns
+    -------
+    a percentage
+
+    """
+    return s.apply(lambda x: f"{x:.{n_decimals}%}").astype("string")
+
+
+def change_display(
+    min_rows: Optional[int] = 25,
+    max_rows: Optional[int] = 50,
+    max_columns: Optional[int] = 100,
+    max_colwidth: Optional[int] = 400,
+    width: Optional[int] = 1000,
+    n_decimals: Optional[int] = 4,
+) -> pd.DataFrame:
+    """
+    Print more of your DataFrame by calling this function
+
+    Parameters
+    ----------
+    min_rows: min number of rows
+    max_rows: max number of rows
+    max_columns: max number of columns
+    max_colwidth: width of a column
+    width: max width
+    n_decimals: number of decimals to display in the float format
+
+    Returns
+    -------
+    None
+    """
+    pd.set_option("display.min_rows", min_rows)
+    pd.set_option("display.max_rows", max_rows)
+    pd.set_option("display.max_columns", max_columns)
+    pd.set_option("max_colwidth", max_colwidth)
+    pd.set_option("display.width", width)
+
+    format_string = "{:,.%df}" % n_decimals
+    pd.set_option("display.float_format", format_string.format)
+
+
+# def apply_to_columns(df: pd.DataFrame, columns, fn, **kwargs) -> pd.DataFrame:
+#     """
+#     Apply a Function to a Subset of Columns
+#     Useful when using .pipe()
+#
+#     :param df: DataFrame
+#     :param columns: an iterable of column names
+#     :param fn: a function to apply
+#
+#     :return: updated DataFrame
+#
+#     If Koalas/Pandas API on Spark, set_option("compute.ops_on_diff_frames", True) must be run
+#     """
+#
+#     df[columns] = df[columns].apply(fn, **kwargs)
+#
+#     return df
