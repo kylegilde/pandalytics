@@ -54,5 +54,6 @@ def df_pytest():
 
     df_pytest["date_col_2"] = pd.date_range("2023-06-27", periods=N_ROWS, tz="UTC")
     df_pytest["date_col_3"] = pd.date_range("2020-06-27", "2023-06-27", periods=N_ROWS)
+    df_pytest["time_delta_col"] = df_pytest.date_col - df_pytest.date_col_3
 
     return df_pytest
