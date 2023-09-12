@@ -1,58 +1,12 @@
 from typing import Optional, List, Tuple, Union, Callable, Literal
 from dataclasses import dataclass
-from functools import partial
+import warnings
+
+import numpy as np
+import pandas as pd
 import humanize
 
-import pandas as pd
-
-
-def get_memory_usage(df: pd.DataFrame) -> str:
-    """
-    Get the size of the DataFrame in human-readable format
-    Parameters
-    ----------
-    df: DataFrame
-
-    Returns
-    -------
-    string
-    """
-    return humanize.naturalsize(df.memory_usage(deep=True).sum())
-
-
-def _print_dtype_changes(df_new, old_dtypes, old_size: Optional[str] = None):
-    """
-    Prints a DataFrame of dtype changes
-
-    Parameters
-    ----------
-    df_new: DataFrame with the new dtypes
-    old_dtypes: the Series that is contained in the df.dtypes attribute.
-
-    Returns
-    -------
-    None, It prints a DataFrame where the index is the column names.
-    It has two columns: old_dtype and new_dtype
-
-    """
-    old_dtypes = old_dtypes.rename("old_dtype")
-    new_dtypes = df_new.dtypes.rename("new_dtype")
-
-    df_changes = (
-        pd.concat([old_dtypes, new_dtypes], axis=1)
-        .loc[lambda df: df.old_dtype.ne(df.new_dtype)]
-        .rename_axis("column", axis=0)
-        .reset_index()
-    )
-
-    n_changes = len(df_changes)
-
-    print(f"{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
-
-    if n_changes > 0:
-        print(df_changes, "\n")
-        if old_size:
-            print(f"Resized from {old_size} to {get_memory_usage(df_new)}")
+from pandalytics.general_utils import safe_partial
 
 
 @dataclass
@@ -66,12 +20,12 @@ class DtypeCasting:
     new_dtype: the intended dtype
     errors: How the errors should be handled
     downcast: The smallest numerical dtype to attempt when downcasting
-    coerce_func: One of the Pandas to_{dtype} functions
+    coerce_func: One of the Pandas to_{dtype} functions or a UDF
     verbose: Should the dtype changes be printed?
     """
 
     dtypes_to_check: Union[List, Tuple, str, object]
-    new_dtype: Union[str, object]
+    new_dtype: Optional[Union[str, object]] = None
     coerce_func: Optional[Callable] = None
     errors: Optional[str] = "ignore"
     downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = ("integer",)
@@ -83,6 +37,7 @@ class DtypeCasting:
         cols_to_check: Optional[Union[List, Tuple, str, int, float]] = None,
     ) -> pd.DataFrame:
         """
+        Applies a casting / coersion to an entire DataFrame by column
 
         Parameters
         ----------
@@ -103,34 +58,83 @@ class DtypeCasting:
 
         df_subset = df_subset.select_dtypes(self.dtypes_to_check)
 
-        if self.coerce_func:
-            if self.coerce_func is pd.to_numeric:
-                final_func = partial(
-                    self.coerce_func, errors=self.errors, downcast=self.downcast
-                )
-            elif self.coerce_func is pd.to_datetime:
-                final_func = partial(self.coerce_func, errors=self.errors)
-            else:
-                final_func = self.coerce_func
+        if self.verbose:
+            casting_function = (
+                self.coerce_func.__name__
+                if self.coerce_func
+                else f"astype({self.new_dtype})"
+            )
+            print(f"Running {casting_function}")
 
-            df_subset = df_subset.apply(final_func).select_dtypes(self.new_dtype)
+        if self.coerce_func:
+            final_func = safe_partial(
+                self.coerce_func, downcast=self.downcast, errors=self.errors
+            )
+            df_subset = df_subset.apply(final_func)
         else:
             df_subset = df_subset.astype(self.new_dtype, errors=self.errors)
 
-        casted_cols = df_subset.columns.tolist()
+        dtype_changes = get_dtype_changes(
+            df_subset, old_dtypes, verbose=self.verbose, old_size=old_size
+        )
 
-        if casted_cols:
-            df[casted_cols] = df_subset
-            if self.verbose:
-                coersion_func = (
-                    self.coerce_func.__name__
-                    if self.coerce_func
-                    else f"astype({self.new_dtype})"
-                )
-                print(f"Ran {coersion_func}")
-                _print_dtype_changes(df, old_dtypes, old_size)
+        if dtype_changes:
+            df[dtype_changes] = df_subset[dtype_changes]
 
         return df
+
+
+def get_memory_usage(df: pd.DataFrame) -> str:
+    """
+    Get the size of the DataFrame in human-readable format
+    Parameters
+    ----------
+    df: DataFrame
+
+    Returns
+    -------
+    string
+    """
+    return humanize.naturalsize(df.memory_usage(deep=True).sum())
+
+
+def get_dtype_changes(
+    df_new, old_dtypes, verbose: Optional[bool] = True, old_size: Optional[str] = None
+):
+    """
+    Prints a DataFrame of dtype changes
+
+    Parameters
+    ----------
+    df_new: DataFrame with the new dtypes
+    old_dtypes: the Series that is contained in the df.dtypes attribute.
+
+    Returns
+    -------
+    None, It prints a DataFrame where the index is the column names.
+    It has two columns: old_dtype and new_dtype
+
+    """
+    old_dtypes = old_dtypes.rename("old_dtype")
+    new_dtypes = df_new.dtypes.rename("new_dtype")
+
+    df_changes = (
+        pd.concat([old_dtypes, new_dtypes], join="inner", axis=1)
+        .loc[lambda df: df.old_dtype.ne(df.new_dtype)]
+        .rename_axis("column", axis=0)
+        .reset_index()
+    )
+    if verbose:
+        n_changes = len(df_changes)
+
+        print(f"{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
+
+        if n_changes > 0:
+            print(df_changes, "\n")
+            if old_size:
+                print(f"Resized from {old_size} to {get_memory_usage(df_new)}")
+
+    return df_changes.column.to_list()
 
 
 def cast_to_numeric(
@@ -162,7 +166,6 @@ def cast_to_numeric(
     """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
-        new_dtype="number",
         coerce_func=pd.to_numeric,
         errors=errors,
         downcast=downcast,
@@ -188,7 +191,7 @@ def to_boolean(s: pd.Series) -> pd.Series:
             if s_values == {True, False}:
                 s = s.astype("boolean")
             elif s_values == {"True", "False"}:
-                s = s.eq("True")
+                s = s.eq("True").astype("boolean")
     return s
 
 
@@ -220,7 +223,6 @@ def cast_to_boolean(
     """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
-        new_dtype="boolean",
         coerce_func=to_boolean,
         verbose=verbose,
     ).cast(df, cols_to_check=cols_to_check)
@@ -286,104 +288,186 @@ def cast_to_datetime(
     """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
-        new_dtype=["datetime", "datetimetz"],
         coerce_func=pd.to_datetime,
         errors=errors,
         verbose=verbose,
     ).cast(df, cols_to_check=cols_to_check)
 
 
-def cast_to_category(
-    df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
-        "object",
-        "string",
-    ),
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    verbose: Optional[bool] = True,
-):
+def downcast_to_float32_if_unique(s: pd.Series) -> pd.Series:
     """
-    Cast columns to categorical dtypes
+    Downcast a Float64 Series to Float32 if the number of unique values can be
+    preserved.
 
     Parameters
     ----------
-    df: DataFrame
-    cols_to_check: a subset of columns to check.
-    dtypes_to_check: the dtypes that should be checked.
-    errors: How the errors should be handled
-    verbose: Should the dtype changes be printed?
+    s
 
     Returns
     -------
-    A DataFrame with categorical dtypes
+
     """
-    return DtypeCasting(
-        dtypes_to_check=dtypes_to_check,
-        new_dtype="category",
-        errors=errors,
-        verbose=verbose,
-    ).cast(df, cols_to_check=cols_to_check)
+    if (s_new := s.astype("Float32")).nunique() == s.nunique():
+        return s_new
+    return s
 
 
-def clean_dtypes(
+@dataclass
+class IntCasting:
+    """
+    Downcast Floats and Integers to the smallest int dtype possible based upon the
+    min and max values
+    """
+
+    df_int_metadata = pd.DataFrame(
+        {
+            "pandas_dtype": [
+                "UInt8",
+                "UInt16",
+                "UInt32",
+                "UInt64",
+                "Int8",
+                "Int16",
+                "Int32",
+                "Int64",
+            ],
+            "min_value": [0, 0, 0, 0, -128, -32768, -2147483648, -9223372036854775808],
+            "max_value": [
+                255,
+                65535,
+                4294967295,
+                18446744073709551615,
+                127,
+                32767,
+                2147483647,
+                9223372036854775807,
+            ],
+        }
+    )
+
+    df_int_metadata["pyarrow_dtypes"] = (
+        df_int_metadata.pandas_dtype.str.lower() + "[pyarrow]"
+    )
+    # df_int_metadata.melt(id_vars=["min_value", "max_value"], value_name="dtype_string",
+    #                      var_name="backend").set_index("backend")
+
+    def could_be_int(self, s: pd.Series) -> bool:
+        """
+
+        Parameters
+        ----------
+        s: Series
+
+        Returns
+        -------
+        bool
+        """
+        self.int_eligible = pd.api.types.is_integer_dtype(s) or (
+            pd.api.types.is_float_dtype(s) and s.dropna().mod(1).eq(0).all()
+        )
+
+        return self.int_eligible
+
+    def downcast_integer(self, s: pd.Series) -> pd.Series:
+        """
+        Downcast a numeric Series to the smallest signed or unsigned integer dtype
+        based upon the Series min and max.
+        Parameters
+        ----------
+        s: Series
+
+        Returns
+        -------
+        Series
+        """
+        if not hasattr(self, "int_eligible"):
+            self.could_be_int(s)
+
+        if not self.int_eligible:
+            return s
+
+        # It cannot get smaller than UInt8
+        if (current_dtype := str(s.dtype)) in ("UInt8", "uint8"):
+            return s
+
+        mx, mn = s.max(), s.min()
+        smallest_dtype = self.df_int_metadata.loc[
+            lambda df: df.min_value.le(mn) & df.max_value.ge(mx), "pandas_dtype"
+        ].iloc[0]
+
+        return s.astype(smallest_dtype) if current_dtype != smallest_dtype else s
+
+
+def cast_dtype(
+    s: pd.Series, downcast: Optional[bool] = True, use_categories: Optional[bool] = True
+) -> pd.Series:
+    """
+    Dynamically coerces a Series to the correct dtype & by default, downcasts numeric dtypes
+    to the smallest dtype possible without reducing the number of unique values.
+
+    Parameters
+    ----------
+    s: Series
+    downcast: Should a numeric dtype be downcast to the smallest dtype possible without
+        reducing the number of unique values
+    use_categories: Should remaining object and string Series be cast to as
+        memory-efficient categories?
+
+    Returns
+    -------
+    s = df_pytest.bool_col.copy().astype("object")
+    """
+    # First, coerce to numeric if possible
+    # Then, convert_dtypes Converts datetime or boolean objects to datetime or boolean.
+    # For consistency, it also converts any numeric numpy dtypes to pandas dtypes.
+    s = s.pipe(pd.to_numeric, errors="ignore").convert_dtypes()
+
+    # FYI, is_numeric_dtype is True for bool dtypes.
+    if not pd.api.types.is_bool_dtype(s) and pd.api.types.is_numeric_dtype(s):
+        if downcast:
+            # If the Series could be an integer, downcast it to the smallest integer
+            # dtype based upon the Series min and max.
+            ic = IntCasting()
+            if ic.could_be_int(s):
+                return ic.downcast_integer(s)
+
+            # Downcast a Float64 Series to Float32 if the number of unique values can be
+            # preserved.
+            if s.dtype in (pd.Float64Dtype(), np.float64):
+                return downcast_to_float32_if_unique(s)
+        else:
+            return s
+
+    # If the Series cannot be coerced to a number, then try a datetime.
+    elif pd.api.types.is_datetime64_any_dtype(s := pd.to_datetime(s, errors="ignore")):
+        return s
+    # Then try boolean
+    elif pd.api.types.is_bool_dtype(s := to_boolean(s)):
+        return s
+    # Cast any remaining strings or objects to a memory-efficient category.
+    elif use_categories and (
+        pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s)
+    ):
+        return s.astype("category")
+    else:
+        return s
+
+
+def cast_dtypes(
     df: pd.DataFrame,
     dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
         "object",
         "string",
+        "number",
     ),
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
     errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = "integer",
-    super_verbose: Optional[bool] = False,
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float", True]] = True,
 ) -> pd.DataFrame:
-    """
-    Casts all the DataFrame dtypes to more optimal dtypes
-
-    - The convert_dtypes method will convert numeric and datetime object columns to
-        numeric and datetime dtypes, but not for numbers and datetimes that are being
-        stored as strings
-    - cast_to_numeric casts all numeric-like non-numeric columns to numeric.
-        (The convert_dtypes method doesn't do this.)
-    - cast_to_datetime: Because the convert_dtypes method fails to find datetime-like
-        strings, cast_to_datetime does this.
-    - cast_to_boolean casts bool object columns and "True"/"False" string values
-        to the boolean dtype.
-    - cast_to_category casts any remaining columns to categories
-
-    Parameters
-    ----------
-    df: DataFrame
-    cols_to_check: a subset of columns to check.
-    dtypes_to_check: the dtypes that should be checked.
-    errors: How the errors should be handled
-    downcast: The smallest numerical dtype to attempt when downcasting
-    super_verbose: Should the dtype changes be printed in all 3 cast functions?
-
-    Returns
-    -------
-    A DataFrame with more appropriate dtypes
-    """
-
-    cast_func_args = dict(
+    return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
+        coerce_func=cast_dtype,
         errors=errors,
-        verbose=super_verbose,
-        cols_to_check=cols_to_check,
-    )
-
-    old_dtypes = df.dtypes
-    old_size = get_memory_usage(df)
-
-    df = (
-        # TODO: create convert_dtypes wrapper
-        df.convert_dtypes()
-        .pipe(cast_to_numeric, **cast_func_args, downcast=downcast)
-        .pipe(cast_to_datetime, **cast_func_args)
-        .pipe(cast_to_boolean, **cast_func_args)
-        .pipe(cast_to_category, **cast_func_args)
-    )
-    print("Ran clean_dtypes")
-    _print_dtype_changes(df, old_dtypes, old_size)
-
-    return df
+        verbose=True,
+        downcast=downcast,
+    ).cast(df, cols_to_check=cols_to_check)

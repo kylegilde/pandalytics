@@ -6,7 +6,7 @@ from pandalytics.cast import (
     cast_to_numeric,
     to_boolean,
     cast_to_boolean,
-    clean_dtypes,
+    cast_dtypes,
 )
 
 
@@ -114,7 +114,7 @@ def test_cast_to_boolean_from_object(df_pytest):
     pd.testing.assert_frame_equal(df_test, df_expected)
 
 
-def test_clean_dtypes_from_string(df_pytest):
+def test_cast_dtypes_from_string(df_pytest):
     df_expected = df_pytest
     expected_dtypes = pd.Series(
         {
@@ -122,30 +122,28 @@ def test_clean_dtypes_from_string(df_pytest):
             "string_col": "category",
             "object_col": "category",
             "date_col": "datetime64[ns]",
-            "binary_col": "Int8",
-            "int_col": "Int16",
+            "binary_col": "UInt8",
+            "int_col": "UInt16",
             "int_col_2": "Int16",
             "int_col_3": "Int32",
-            "float_col": "Float64",
-            "float_col_2": "Float64",
-            "float_col_3": "Float64",
+            "float_col": "Float32",
+            "float_col_2": "Float32",
+            "float_col_3": "Float32",
             "bool_col": "boolean",
-            "normal_1": "Float64",
-            "normal_2": "Float64",
+            "normal_1": "Float32",
+            "normal_2": "Float32",
             "date_col_2": "datetime64[ns, UTC]",
             "date_col_3": "datetime64[ns]",
         },
         dtype="string",
     )
-    test_dtypes = (
-        df_expected.astype("string").pipe(clean_dtypes).dtypes.astype("string")
-    )
+    test_dtypes = df_expected.astype("string").pipe(cast_dtypes).dtypes.astype("string")
     # test_dtypes.to_dict()
 
     pd.testing.assert_series_equal(expected_dtypes, test_dtypes)
 
 
-def test_clean_dtypes_from_object(df_pytest):
+def test_cast_dtypes_from_object(df_pytest):
     df_expected = df_pytest
     expected_dtypes = pd.Series(
         {
@@ -153,23 +151,22 @@ def test_clean_dtypes_from_object(df_pytest):
             "string_col": "category",
             "object_col": "category",
             "date_col": "datetime64[ns]",
-            "binary_col": "Int64",
-            "int_col": "Int64",
-            "int_col_2": "Int64",
-            "int_col_3": "Int64",
-            "float_col": "Float64",
-            "float_col_2": "Float64",
-            "float_col_3": "Float64",
+            "binary_col": "UInt8",
+            "int_col": "UInt16",
+            "int_col_2": "Int16",
+            "int_col_3": "Int32",
+            "float_col": "Float32",
+            "float_col_2": "Float32",
+            "float_col_3": "Float32",
             "bool_col": "boolean",
-            "normal_1": "Float64",
-            "normal_2": "Float64",
+            "normal_1": "Float32",
+            "normal_2": "Float32",
             "date_col_2": "datetime64[ns, UTC]",
             "date_col_3": "datetime64[ns]",
         },
         dtype="string",
     )
-    test_dtypes = (
-        df_expected.astype("object").pipe(clean_dtypes).dtypes.astype("string")
-    )
+    test_dtypes = df_expected.astype("object").pipe(cast_dtypes).dtypes.astype("string")
     # test_dtypes.to_dict()
+
     pd.testing.assert_series_equal(expected_dtypes, test_dtypes)
