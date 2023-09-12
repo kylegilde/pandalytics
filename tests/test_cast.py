@@ -52,7 +52,7 @@ def test_cast_to_datetime_from_category(df_pytest):
 
 
 def test_cast_to_numeric_from_string(df_pytest):
-    df_expected = df_pytest.select_dtypes("number")
+    df_expected = df_pytest.select_dtypes("number", exclude="timedelta")
     df_test = df_expected.astype("string").pipe(cast_to_numeric)
 
     pd.testing.assert_frame_equal(df_test, df_expected)
@@ -134,6 +134,7 @@ def test_cast_dtypes_from_string(df_pytest):
             "normal_2": "Float32",
             "date_col_2": "datetime64[ns, UTC]",
             "date_col_3": "datetime64[ns]",
+            "time_delta_col": "timedelta64[ns]",
         },
         dtype="string",
     )
@@ -163,6 +164,7 @@ def test_cast_dtypes_from_object(df_pytest):
             "normal_2": "Float32",
             "date_col_2": "datetime64[ns, UTC]",
             "date_col_3": "datetime64[ns]",
+            "time_delta_col": "timedelta64[ns]",
         },
         dtype="string",
     )

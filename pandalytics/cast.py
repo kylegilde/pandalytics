@@ -1,6 +1,5 @@
-from typing import Optional, List, Tuple, Union, Callable, Literal
-from dataclasses import dataclass
-import warnings
+from typing import Optional, List, Tuple, Union, Callable, Literal, Dict
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -27,8 +26,9 @@ class DtypeCasting:
     dtypes_to_check: Union[List, Tuple, str, object]
     new_dtype: Optional[Union[str, object]] = None
     coerce_func: Optional[Callable] = None
+    coerce_func_kws: dict = field(default_factory=dict)
     errors: Optional[str] = "ignore"
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = ("integer",)
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = None
     verbose: Optional[bool] = True
 
     def cast(
@@ -68,7 +68,7 @@ class DtypeCasting:
 
         if self.coerce_func:
             final_func = safe_partial(
-                self.coerce_func, downcast=self.downcast, errors=self.errors
+                self.coerce_func, downcast=self.downcast, errors=self.errors, **self.coerce_func_kws
             )
             df_subset = df_subset.apply(final_func)
         else:
@@ -82,6 +82,97 @@ class DtypeCasting:
             df[dtype_changes] = df_subset[dtype_changes]
 
         return df
+
+
+@dataclass
+class IntCasting:
+    """
+    Downcast Floats and Integers to the smallest int dtype possible based upon the
+    min and max values
+
+    Attributes
+    ----------
+    df_int_metadata: contains the dtype names and min/max values
+    """
+
+    df_int_metadata = pd.DataFrame(
+        {
+            "pandas_dtype": [
+                "UInt8",
+                "UInt16",
+                "UInt32",
+                "UInt64",
+                "Int8",
+                "Int16",
+                "Int32",
+                "Int64",
+            ],
+            "min_value": [0, 0, 0, 0, -128, -32768, -2147483648, -9223372036854775808],
+            "max_value": [
+                255,
+                65535,
+                4294967295,
+                18446744073709551615,
+                127,
+                32767,
+                2147483647,
+                9223372036854775807,
+            ],
+        }
+    )
+
+    df_int_metadata["pyarrow_dtypes"] = (
+        df_int_metadata.pandas_dtype.str.lower() + "[pyarrow]"
+    )
+
+    # df_int_metadata.melt(id_vars=["min_value", "max_value"], value_name="dtype_string",
+    #                      var_name="backend").set_index("backend")
+
+    def could_be_int(self, s: pd.Series) -> bool:
+        """
+        Is the number an int or float and has no decimal values?
+        Parameters
+        ----------
+        s: Series
+
+        Returns
+        -------
+        bool
+        """
+        self.int_eligible = pd.api.types.is_integer_dtype(s) or (
+            pd.api.types.is_float_dtype(s) and s.dropna().mod(1).eq(0).all()
+        )
+
+        return self.int_eligible
+
+    def downcast_integer(self, s: pd.Series) -> pd.Series:
+        """
+        Downcast a numeric Series to the smallest signed or unsigned integer dtype
+        based upon the Series min and max.
+        Parameters
+        ----------
+        s: Series
+
+        Returns
+        -------
+        Series
+        """
+        if not hasattr(self, "int_eligible"):
+            self.could_be_int(s)
+
+        if not self.int_eligible:
+            return s
+
+        # It cannot get smaller than UInt8
+        if (current_dtype := str(s.dtype)) == "UInt8":
+            return s
+
+        mx, mn = s.max(), s.min()
+        smallest_dtype = self.df_int_metadata.loc[
+            lambda df: df.min_value.le(mn) & df.max_value.ge(mx), "pandas_dtype"
+        ].iloc[0]
+
+        return s.astype(smallest_dtype) if current_dtype != smallest_dtype else s
 
 
 def get_memory_usage(df: pd.DataFrame) -> str:
@@ -301,101 +392,29 @@ def downcast_to_float32_if_unique(s: pd.Series) -> pd.Series:
 
     Parameters
     ----------
-    s
+    s: Series
 
     Returns
     -------
-
+    a Float32 Series if possible
     """
     if (s_new := s.astype("Float32")).nunique() == s.nunique():
         return s_new
     return s
 
 
-@dataclass
-class IntCasting:
-    """
-    Downcast Floats and Integers to the smallest int dtype possible based upon the
-    min and max values
+def is_object_or_string(s):
     """
 
-    df_int_metadata = pd.DataFrame(
-        {
-            "pandas_dtype": [
-                "UInt8",
-                "UInt16",
-                "UInt32",
-                "UInt64",
-                "Int8",
-                "Int16",
-                "Int32",
-                "Int64",
-            ],
-            "min_value": [0, 0, 0, 0, -128, -32768, -2147483648, -9223372036854775808],
-            "max_value": [
-                255,
-                65535,
-                4294967295,
-                18446744073709551615,
-                127,
-                32767,
-                2147483647,
-                9223372036854775807,
-            ],
-        }
-    )
+    Parameters
+    ----------
+    s
 
-    df_int_metadata["pyarrow_dtypes"] = (
-        df_int_metadata.pandas_dtype.str.lower() + "[pyarrow]"
-    )
-    # df_int_metadata.melt(id_vars=["min_value", "max_value"], value_name="dtype_string",
-    #                      var_name="backend").set_index("backend")
+    Returns
+    -------
 
-    def could_be_int(self, s: pd.Series) -> bool:
-        """
-
-        Parameters
-        ----------
-        s: Series
-
-        Returns
-        -------
-        bool
-        """
-        self.int_eligible = pd.api.types.is_integer_dtype(s) or (
-            pd.api.types.is_float_dtype(s) and s.dropna().mod(1).eq(0).all()
-        )
-
-        return self.int_eligible
-
-    def downcast_integer(self, s: pd.Series) -> pd.Series:
-        """
-        Downcast a numeric Series to the smallest signed or unsigned integer dtype
-        based upon the Series min and max.
-        Parameters
-        ----------
-        s: Series
-
-        Returns
-        -------
-        Series
-        """
-        if not hasattr(self, "int_eligible"):
-            self.could_be_int(s)
-
-        if not self.int_eligible:
-            return s
-
-        # It cannot get smaller than UInt8
-        if (current_dtype := str(s.dtype)) in ("UInt8", "uint8"):
-            return s
-
-        mx, mn = s.max(), s.min()
-        smallest_dtype = self.df_int_metadata.loc[
-            lambda df: df.min_value.le(mn) & df.max_value.ge(mx), "pandas_dtype"
-        ].iloc[0]
-
-        return s.astype(smallest_dtype) if current_dtype != smallest_dtype else s
+    """
+    return pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s)
 
 
 def cast_dtype(
@@ -415,42 +434,49 @@ def cast_dtype(
 
     Returns
     -------
-    s = df_pytest.bool_col.copy().astype("object")
+    a correct and more memory-efficient dtype if possible
     """
     # First, coerce to numeric if possible
-    # Then, convert_dtypes Converts datetime or boolean objects to datetime or boolean.
+    if is_object_or_string(s):
+        s = s.pipe(pd.to_numeric, errors="ignore")
+
+    # Then, convert_dtypes will converts datetime or boolean objects to datetime or boolean.
     # For consistency, it also converts any numeric numpy dtypes to pandas dtypes.
-    s = s.pipe(pd.to_numeric, errors="ignore").convert_dtypes()
+    s = s.convert_dtypes()
 
-    # FYI, is_numeric_dtype is True for bool dtypes.
-    if not pd.api.types.is_bool_dtype(s) and pd.api.types.is_numeric_dtype(s):
-        if downcast:
-            # If the Series could be an integer, downcast it to the smallest integer
-            # dtype based upon the Series min and max.
-            ic = IntCasting()
-            if ic.could_be_int(s):
-                return ic.downcast_integer(s)
+    if downcast:
+        # If the Series could be an integer, downcast it to the smallest integer
+        # dtype based upon the Series min and max.
+        ic = IntCasting()
+        if ic.could_be_int(s):
+            return ic.downcast_integer(s)
 
-            # Downcast a Float64 Series to Float32 if the number of unique values can be
-            # preserved.
-            if s.dtype in (pd.Float64Dtype(), np.float64):
-                return downcast_to_float32_if_unique(s)
-        else:
+        # Downcast a Float64 Series to Float32 if the number of unique values can be
+        # preserved.
+        if s.dtype in (pd.Float64Dtype(), np.float64):
+            return downcast_to_float32_if_unique(s)
+
+    # If it is still a string or object, then try 3 other dtypes. Otherwise, cast it to
+    # a category
+    if is_object_or_string(s):
+        # If the Series cannot be coerced to a number, then try a datetime.
+        if pd.api.types.is_datetime64_any_dtype(
+            s := pd.to_datetime(s, errors="ignore")
+        ):
             return s
+        # Then try boolean
+        if pd.api.types.is_bool_dtype(s := to_boolean(s)):
+            return s
+        # Then try the timedelta dtype, which does not like pd.NA.
+        if pd.api.types.is_timedelta64_dtype(
+            s := pd.to_timedelta(s.fillna(np.nan), errors="ignore")
+        ):
+            return s
+        # Cast any remaining strings or objects to a memory-efficient category.
+        if use_categories:
+            return s.astype("category")
 
-    # If the Series cannot be coerced to a number, then try a datetime.
-    elif pd.api.types.is_datetime64_any_dtype(s := pd.to_datetime(s, errors="ignore")):
-        return s
-    # Then try boolean
-    elif pd.api.types.is_bool_dtype(s := to_boolean(s)):
-        return s
-    # Cast any remaining strings or objects to a memory-efficient category.
-    elif use_categories and (
-        pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s)
-    ):
-        return s.astype("category")
-    else:
-        return s
+    return s
 
 
 def cast_dtypes(
@@ -462,7 +488,7 @@ def cast_dtypes(
     ),
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
     errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float", True]] = True,
+    downcast: Optional[bool] = True,
 ) -> pd.DataFrame:
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
@@ -470,4 +496,5 @@ def cast_dtypes(
         errors=errors,
         verbose=True,
         downcast=downcast,
+        use_categories = True,
     ).cast(df, cols_to_check=cols_to_check)
