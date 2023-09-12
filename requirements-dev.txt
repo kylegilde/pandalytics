@@ -1,9 +1,12 @@
 pandas>=1.0.0
-numpy
+numpy>=1.25.0
 plotly>=4.0.0
 scikit-learn>=1.0.0
-IPython
-black
-pytest
-# TODO: coverage
-# TODO: typeguard
+IPython>=8.14.0
+black>=23.3.0
+pytest>=7.4.0
+pyarrow
+humanize
+
+# TODO: coverage, typeguard>=4.0.0
+# TODO: typeguard or mypy

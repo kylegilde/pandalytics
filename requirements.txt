@@ -3,3 +3,5 @@ plotly>=4.0.0
 scikit-learn>=1.0.0
 numpy
 IPython
+pyarrow
+humanize
