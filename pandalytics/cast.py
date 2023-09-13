@@ -18,8 +18,8 @@ class DtypeCasting:
     dtypes_to_check: the dtypes that should be checked.
     new_dtype: the intended dtype
     errors: How the errors should be handled
-    downcast: The smallest numerical dtype to attempt when downcasting
     coerce_func: One of the Pandas to_{dtype} functions or a UDF
+    coerce_func_kws: a dict of key-value pairs for coerce_func
     verbose: Should the dtype changes be printed?
     """
 
@@ -28,7 +28,6 @@ class DtypeCasting:
     coerce_func: Optional[Callable] = None
     coerce_func_kws: dict = field(default_factory=dict)
     errors: Optional[str] = "ignore"
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = None
     verbose: Optional[bool] = True
 
     def cast(
@@ -68,7 +67,9 @@ class DtypeCasting:
 
         if self.coerce_func:
             final_func = safe_partial(
-                self.coerce_func, downcast=self.downcast, errors=self.errors, **self.coerce_func_kws
+                self.coerce_func,
+                errors=self.errors,
+                **self.coerce_func_kws,
             )
             df_subset = df_subset.apply(final_func)
         else:
@@ -236,7 +237,7 @@ def cast_to_numeric(
     ),
     cols_to_check: Optional[Union[List, Tuple]] = None,
     errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = "integer",
+    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = None,
     verbose: Optional[bool] = True,
 ):
     """
@@ -258,8 +259,8 @@ def cast_to_numeric(
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         coerce_func=pd.to_numeric,
+        coerce_func_kws=dict(downcast=downcast),
         errors=errors,
-        downcast=downcast,
         verbose=verbose,
     ).cast(df, cols_to_check=cols_to_check)
 
@@ -294,7 +295,6 @@ def cast_to_boolean(
     ),
     cols_to_check: Optional[Union[List, Tuple]] = None,
     verbose: Optional[bool] = True,
-    **kwargs,
 ):
     """
     Cast columns to numeric dtypes
@@ -304,9 +304,7 @@ def cast_to_boolean(
     df: DataFrame
     cols_to_check: a subset of columns to check.
     dtypes_to_check: the dtypes that should be checked.
-    errors: How the errors should be handled
     verbose: Should the dtype changes be printed?
-    kwargs: Just here for compatibility. Not currently in use.
 
     Returns
     -------
@@ -489,12 +487,12 @@ def cast_dtypes(
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
     errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
     downcast: Optional[bool] = True,
+    use_categories: Optional[bool] = True,
 ) -> pd.DataFrame:
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         coerce_func=cast_dtype,
+        coerce_func_kws=dict(use_categories=use_categories, downcast=downcast),
         errors=errors,
         verbose=True,
-        downcast=downcast,
-        use_categories = True,
     ).cast(df, cols_to_check=cols_to_check)

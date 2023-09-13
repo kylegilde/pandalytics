@@ -53,7 +53,7 @@ def test_cast_to_datetime_from_category(df_pytest):
 
 def test_cast_to_numeric_from_string(df_pytest):
     df_expected = df_pytest.select_dtypes("number", exclude="timedelta")
-    df_test = df_expected.astype("string").pipe(cast_to_numeric)
+    df_test = df_expected.astype("string").pipe(cast_to_numeric, downcast="integer")
 
     pd.testing.assert_frame_equal(df_test, df_expected)
 
