@@ -132,6 +132,7 @@ class IntCasting:
     def could_be_int(self, s: pd.Series) -> bool:
         """
         Is the number an int or float and has no decimal values?
+
         Parameters
         ----------
         s: Series
@@ -150,6 +151,7 @@ class IntCasting:
         """
         Downcast a numeric Series to the smallest signed or unsigned integer dtype
         based upon the Series min and max.
+
         Parameters
         ----------
         s: Series
@@ -401,15 +403,17 @@ def downcast_to_float32_if_unique(s: pd.Series) -> pd.Series:
     return s
 
 
-def is_object_or_string(s):
+def is_object_or_string(s: pd.Series) -> bool:
     """
+    Convenient wrapper function for testing if a Series is an object or string dtype
 
     Parameters
     ----------
-    s
+    s: Series
 
     Returns
     -------
+    bool
 
     """
     return pd.api.types.is_object_dtype(s) or pd.api.types.is_string_dtype(s)
@@ -485,14 +489,32 @@ def cast_dtypes(
         "number",
     ),
     cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
     downcast: Optional[bool] = True,
     use_categories: Optional[bool] = True,
 ) -> pd.DataFrame:
+    """
+    Dynamically coerces the columns in a DataFrame to the correct dtype.
+
+    By default, it also downcasts numeric dtypes to the smallest dtype possible without
+    reducing the number of unique values.
+
+    Parameters
+    ----------
+    df: DataFrame
+    cols_to_check: a subset of columns to check.
+    dtypes_to_check: the dtypes that should be checked.
+    downcast: Should a numeric dtype be downcast to the smallest dtype possible without
+        reducing the number of unique values
+    use_categories: Should remaining object and string Series be cast to as
+        memory-efficient categories?
+
+    Returns
+    -------
+    A DataFrame with more correct and more memory-efficient dtypes if possible
+    """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         coerce_func=cast_dtype,
         coerce_func_kws=dict(use_categories=use_categories, downcast=downcast),
-        errors=errors,
         verbose=True,
     ).cast(df, cols_to_check=cols_to_check)
