@@ -76,7 +76,7 @@ class DtypeCasting:
             df_subset = df_subset.astype(self.new_dtype, errors=self.errors)
 
         dtype_changes = get_dtype_changes(
-            df_subset, old_dtypes, verbose=self.verbose, old_size=old_size
+            df_subset, old_dtypes, old_size=old_size, verbose=self.verbose
         )
 
         if dtype_changes:
@@ -193,7 +193,7 @@ def get_memory_usage(df: pd.DataFrame) -> str:
 
 
 def get_dtype_changes(
-    df_new, old_dtypes, verbose: Optional[bool] = True, old_size: Optional[str] = None
+    df_new, old_dtypes, old_size: Optional[str] = None, verbose: Optional[bool] = True
 ):
     """
     Prints a DataFrame of dtype changes
@@ -202,6 +202,9 @@ def get_dtype_changes(
     ----------
     df_new: DataFrame with the new dtypes
     old_dtypes: the Series that is contained in the df.dtypes attribute.
+    old_size: The string output from get_memory_usage
+    verbose: Should the dtype changes be printed?
+
 
     Returns
     -------
