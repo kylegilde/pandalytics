@@ -1,11 +1,8 @@
-import pytest
-import numpy as np
 import pandas as pd
 
 from pandalytics.metrics import (
     get_regression_metrics,
     create_regression_metrics,
-    _use_metric_abbreviations,
 )
 
 df_expected = pd.DataFrame(
