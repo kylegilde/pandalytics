@@ -12,7 +12,7 @@ def safe_partial(func: Callable, *args, **kwargs):
     ----------
     func: a callable
     args: a list of values to pass by position
-    kwargs: key-value pairs not in the kwarg_dict
+    kwargs: key-value pairs
 
     Returns
     -------
