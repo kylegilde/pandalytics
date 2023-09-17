@@ -4,9 +4,7 @@ import pandas as pd
 from pandalytics.dates import (
     get_holiday_dates,
     create_bday_flag,
-    get_business_dates,
     get_datetime_attributes,
-    get_datetime_attribute,
     filter_to_business_dates,
     count_fractional_business_days,
 )
@@ -143,22 +141,8 @@ def test_create_bday_flag(df_pytest):
     pd.testing.assert_series_equal(test_values, expected_values, check_names=False)
 
 
-# @pytest.mark.parametrize(
-#     "min_date, max_date, expected_values",
-#     [
-#         ("2023-09-15", "2023-09-15", pd.DatetimeIndex(["2023-09-15"])),
-#         # (),
-#         # (),
-#     ],
-# )
-# def test_get_business_dates(min_date, max_date, expected_values):
-#     min_date, max_date = "2023-12-24", "2024-01-02"
-#     test_values = get_business_dates(min_date, max_date)
-#     pd.testing.assert_index_equal(test_values, expected_values)
-
-
 def test_get_datetime_attributes():
-    s = (
+    s_input = (
         pd.date_range("2023-09-15", periods=10)
         .rename("created_at")
         .to_series()
@@ -199,8 +183,35 @@ def test_get_datetime_attributes():
             ],
         }
     )
-    df_test = get_datetime_attributes(s)
+    df_test = get_datetime_attributes(s_input)
 
     pd.testing.assert_frame_equal(df_test, df_expected, check_dtype=False)
 
-# count_fractional_business_days(df_pytest.date_col, df_pytest.date_col_3)
+
+def test_count_fractional_business_days():
+    s_expected = pd.Series(
+        [
+            508.0,
+            481.125,
+            453.2083333333333,
+            424.0,
+            397.125,
+            368.0,
+            341.0,
+            309.6666666666667,
+            284.0,
+            256.0,
+        ]
+    )
+    s_start = (
+        pd.date_range("2020-06-27", "2023-06-27", periods=10)
+        .to_series()
+        .reset_index(drop=True)
+    )
+    s_end = (
+        pd.date_range("2022-06-27", "2024-06-27", periods=10)
+        .to_series()
+        .reset_index(drop=True)
+    )
+    s_test = count_fractional_business_days(s_start, s_end)
+    pd.testing.assert_series_equal(s_test, s_expected)
