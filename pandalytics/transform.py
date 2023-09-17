@@ -138,6 +138,7 @@ def drop_single_value_cols(df: pd.DataFrame, dropna: bool = False) -> pd.DataFra
 def format_percentage(s: pd.Series, n_decimals: Optional[int] = 2) -> pd.Series:
     """
     Formats a numeric Series as a percentage string
+
     Parameters
     ----------
     s: numeric Series
