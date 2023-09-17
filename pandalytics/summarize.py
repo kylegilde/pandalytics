@@ -20,7 +20,6 @@ def value_counts_pct(
     -------
     a Series
     """
-    # return s.value_counts(normalize=True, dropna=dropna).mul(100)
     return (
         s.value_counts(dropna=dropna)
         .to_frame("n")
