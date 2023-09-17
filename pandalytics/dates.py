@@ -75,36 +75,6 @@ def get_holiday_dates(
     return holiday_class.holidays(pd.Timestamp(start_date), pd.Timestamp(end_date))
 
 
-def get_business_dates(
-    start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-    end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-    drop_holidays: Optional[bool] = True,
-    only_major_holidays: Optional[bool] = True,
-):
-    """
-
-    Parameters
-    ----------
-    start_date
-    end_date
-    drop_holidays
-    only_major_holidays
-
-    Returns
-    -------
-
-    """
-
-    if drop_holidays:
-        holidays = get_holiday_dates(
-            start_date, end_date, only_major_holidays=only_major_holidays
-        ).to_list()
-    else:
-        holidays = None
-
-    return pd.bdate_range(start_date, end_date, holidays=holidays)
-
-
 def create_bday_flag(
     dt_series: pd.Series,
     drop_holidays: Optional[bool] = True,
@@ -115,7 +85,7 @@ def create_bday_flag(
     Parameters
     ----------
     dt_series: DateTime Series
-    drop_holidays
+    drop_holidays: Should holidays be removed?
     only_major_holidays: do you want to use only the 6 Major holidays or all federal
         holidays?
 
@@ -146,15 +116,15 @@ def filter_to_business_dates(
 
     Parameters
     ----------
-    df_or_s
-    date_col
-    drop_holidays
+    df_or_s: a DataFrame or datetime Series
+    date_col: The name of the datetime column if using a DataFrame
+    drop_holidays: Should holidays be removed?
     only_major_holidays: do you want to use only the 6 Major holidays or all federal
         holidays?
 
     Returns
     -------
-
+    a DataFrame or datetime Series subset to business days
     """
     dt_series = df_or_s[date_col] if isinstance(df_or_s, pd.DataFrame) else df_or_s
 
@@ -181,6 +151,9 @@ def get_datetime_attribute(s: pd.Series, attribute: str) -> pd.Series:
     -------
     the attribute Series
     """
+    if isinstance(s, pd.DatetimeIndex):
+        raise ValueError("get_datetime_attribute won't work with a DatetimeIndex. "
+                         "Use .to_series() to convert it to a Series")
 
     return (
         s.dt.isocalendar().week if attribute == "week" else getattr(s.dt, attribute)
@@ -241,7 +214,7 @@ def count_fractional_business_days(
     ----------
     start_dt_series
     end_dt_series
-    drop_holidays
+    drop_holidays: Should holidays be removed?
     only_major_holidays: do you want to use only the 6 Major holidays or all federal
         holidays?
     no_negative_values
