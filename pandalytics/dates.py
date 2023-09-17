@@ -200,26 +200,28 @@ def get_datetime_attributes(
 
 
 def count_fractional_business_days(
-    start_dt_series: pd.Series,
-    end_dt_series: pd.Series,
-    drop_holidays: Optional[bool] = True,
-    only_major_holidays: Optional[bool] = True,
-    no_negative_values: Optional[bool] = True,
-    business_hour_start: Optional[int] = 9,
-    business_hour_end: Optional[int] = 17,
+        start_dt_series: pd.Series,
+        end_dt_series: pd.Series,
+        drop_holidays: Optional[bool] = True,
+        only_major_holidays: Optional[bool] = True,
+        no_negative_values: Optional[bool] = True,
+        business_hour_start: Optional[Union[int, float]] = 9,
+        business_hour_end: Optional[Union[int, float]] = 17,
 ) -> pd.Series:
     """
+    Calculate the amount of fractional business days between to datetimes
 
     Parameters
     ----------
-    start_dt_series
-    end_dt_series
+    start_dt_series: datetime Series
+    end_dt_series: datetime Series
     drop_holidays: Should holidays be removed?
     only_major_holidays: do you want to use only the 6 Major holidays or all federal
         holidays?
-    no_negative_values
-    business_hour_start
-    business_hour_end
+    no_negative_values: If an end date is comes before a start date, should this be set
+        to zero?
+    business_hour_start: The hour when the business day starts
+    business_hour_end: The hour when the business day ends
 
     Returns
     -------
