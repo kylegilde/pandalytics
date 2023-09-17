@@ -2,6 +2,7 @@
 Contains date-related functions & classes
 """
 from typing import Union, Optional, List, Tuple
+from functools import partial
 import datetime as dt
 
 import numpy as np
@@ -30,21 +31,21 @@ class USMajorHolidayCalendar(USFederalHolidayCalendar):
         holiday
         for holiday in USFederalHolidayCalendar.rules
         if holiday.name
-           in [
-               "New Year's Day",
-               "Memorial Day",
-               "Independence Day",
-               "Labor Day",
-               "Thanksgiving Day",
-               "Christmas Day",
-           ]
+        in [
+            "New Year's Day",
+            "Memorial Day",
+            "Independence Day",
+            "Labor Day",
+            "Thanksgiving Day",
+            "Christmas Day",
+        ]
     ]
 
 
 def get_holiday_dates(
-        start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-        end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-        only_major_holidays: Optional[bool] = True,
+    start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
+    end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
+    only_major_holidays: Optional[bool] = True,
 ) -> pd.DatetimeIndex:
     """
     A function wrapper for the holiday calendar class
@@ -75,10 +76,10 @@ def get_holiday_dates(
 
 
 def get_business_dates(
-        start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-        end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-        drop_holidays: Optional[bool] = True,
-        only_major_holidays: Optional[bool] = True,
+    start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
+    end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
+    drop_holidays: Optional[bool] = True,
+    only_major_holidays: Optional[bool] = True,
 ):
     """
 
@@ -104,30 +105,25 @@ def get_business_dates(
     return pd.bdate_range(start_date, end_date, holidays=holidays)
 
 
-def filter_to_business_dates(
-        df_or_s: Union[pd.DataFrame, pd.Series],
-        date_col: Optional[Union[str, int]] = None,
-        drop_holidays: Optional[bool] = True,
-        only_major_holidays: Optional[bool] = True,
-) -> Union[pd.DataFrame, pd.Series]:
+def create_bday_flag(
+    dt_series: pd.Series,
+    drop_holidays: Optional[bool] = True,
+    only_major_holidays: Optional[bool] = True,
+) -> pd.Series:
     """
 
     Parameters
     ----------
-    df_or_s
-    date_col
+    dt_series: DateTime Series
     drop_holidays
-    only_major_holidays
+    only_major_holidays: do you want to use only the 6 Major holidays or all federal
+        holidays?
 
     Returns
     -------
+    boolean Series
 
     """
-
-    if isinstance(df_or_s, pd.DataFrame):
-        dt_series = df_or_s[date_col]
-    else:
-        dt_series = pd.Series(df_or_s)
 
     boolean_mask = dt_series.dt.day_of_week.lt(5)
 
@@ -137,36 +133,64 @@ def filter_to_business_dates(
         )
         boolean_mask &= ~dt_series.isin(holidays)
 
-    return df_or_s.loc[boolean_mask]
+    return boolean_mask
 
 
-def get_datetime_attribute(s, attribute):
+def filter_to_business_dates(
+    df_or_s: Union[pd.DataFrame, pd.Series],
+    date_col: Optional[Union[str, int]] = None,
+    drop_holidays: Optional[bool] = True,
+    only_major_holidays: Optional[bool] = True,
+) -> Union[pd.DataFrame, pd.Series]:
     """
 
     Parameters
     ----------
-    s
-    attribute
+    df_or_s
+    date_col
+    drop_holidays
+    only_major_holidays: do you want to use only the 6 Major holidays or all federal
+        holidays?
 
     Returns
     -------
 
     """
+    dt_series = df_or_s[date_col] if isinstance(df_or_s, pd.DataFrame) else df_or_s
 
-    if isinstance(s, pd.DatetimeIndex):
-        s, index = s.to_series(), s
-    else:
-        index = s.index
+    boolean_mask = create_bday_flag(
+        dt_series,
+        drop_holidays=drop_holidays,
+        only_major_holidays=only_major_holidays,
+    )
+
+    return df_or_s.loc[boolean_mask]
+
+
+def get_datetime_attribute(s: pd.Series, attribute: str) -> pd.Series:
+    """
+    Get DateTime attribute from a DateTime Series.
+
+
+    Parameters
+    ----------
+    s: Series
+    attribute: name of the attribute
+
+    Returns
+    -------
+    the attribute Series
+    """
 
     return (
         s.dt.isocalendar().week if attribute == "week" else getattr(s.dt, attribute)
-    ).reindex(index)
+    )
 
 
 def get_datetime_attributes(
-        s: pd.Series,
-        attributes_to_include: Optional[Union[List, pd.Series, Tuple]] = None,
-        prefix_separator="_",
+    s: pd.Series,
+    attributes_to_include: Optional[Union[List, pd.Series, Tuple]] = None,
+    prefix_separator: Optional[str] = "_",
 ) -> pd.DataFrame:
     """
     Returns the Numeric and Boolean DateTime Attribute Values as a DataFrame
@@ -203,26 +227,31 @@ def get_datetime_attributes(
 
 
 def count_fractional_business_days(
-        start_dt_series,
-        end_dt_series,
-        only_major_holidays: Optional[bool] = True,
-        no_negative_values=True,
-        business_hour_start=9,
-        business_hour_end=17,
-):
+    start_dt_series: pd.Series,
+    end_dt_series: pd.Series,
+    drop_holidays: Optional[bool] = True,
+    only_major_holidays: Optional[bool] = True,
+    no_negative_values: Optional[bool] = True,
+    business_hour_start: Optional[int] = 9,
+    business_hour_end: Optional[int] = 17,
+) -> pd.Series:
     """
 
     Parameters
     ----------
     start_dt_series
     end_dt_series
+    drop_holidays
+    only_major_holidays: do you want to use only the 6 Major holidays or all federal
+        holidays?
     no_negative_values
     business_hour_start
     business_hour_end
 
     Returns
     -------
-
+    Series
+    start_dt_series, end_dt_series = df_pytest.date_col_2, df_pytest.date_col_2
     """
     start_dt_series, end_dt_series = pd.to_datetime(start_dt_series), pd.to_datetime(
         end_dt_series
@@ -231,7 +260,8 @@ def count_fractional_business_days(
     # start the intermediate calculations
     business_hours_per_day = business_hour_end - business_hour_start
 
-    min_date, max_date = start_dt_series.min(), end_dt_series.max()
+    all_dates = pd.concat([start_dt_series, end_dt_series])
+    min_date, max_date = all_dates.min(), all_dates.max()
 
     holidays = get_holiday_dates(
         min_date, max_date, only_major_holidays=only_major_holidays
@@ -244,36 +274,40 @@ def count_fractional_business_days(
         holidays=holidays.values,
     )
 
-    start_dt_is_business_day = start_dt_series.dt.weekday.lt(5) & ~start_dt_series.isin(
-        holidays
+    # Find out if the start and end dates are business days
+    bday_fn = partial(
+        create_bday_flag,
+        drop_holidays=drop_holidays,
+        only_major_holidays=only_major_holidays
     )
-    end_dt_is_business_day = end_dt_series.dt.weekday.lt(5) & ~end_dt_series.isin(
-        holidays
-    )
+    start_dt_loss = bday_fn(start_dt_series).astype("Uint8")
+    end_dt_gain = bday_fn(end_dt_series).astype("Uint8")
 
     # If the start date is a business day, calculate partially lost business days
-    # that preceded the start time. Otherwise it will be zero.
-    start_dt_loss = np.where(
-        start_dt_is_business_day,
+    # that preceded the start time. Otherwise, it will be zero.
+    start_dt_loss.mask(
+        lambda s: s,
         (
-                business_hour_end
-                - start_dt_series.dt.hour
-                - start_dt_series.dt.minute.div(60)
+            business_hour_end
+            - start_dt_series.dt.hour
+            - start_dt_series.dt.minute.div(60)
         )
         .div(business_hours_per_day)
-        .clip(0, 1)
+        .clip(0, 1)  # Handles where the current hour < business start hour
         .sub(1),
-        0,  # zero if not a business day
+        inplace=True
     )
 
     # this adds the partial bday that occurs on the end date
-    end_dt_gain = np.where(
-        end_dt_is_business_day,
-        end_dt_series.dt.hour.add(end_dt_series.dt.minute.div(60))
-        .sub(business_hour_start)
-        .div(business_hours_per_day)
-        .clip(0, 1),
-        0,
+    end_dt_gain.mask(
+        lambda s: s,
+        (
+            end_dt_series.dt.hour.add(end_dt_series.dt.minute.div(60))
+            .sub(business_hour_start)
+            .div(business_hours_per_day)
+            .clip(0, 1)  # Handles where the current hour < business start hour
+        ),
+        inplace=True
     )
 
     # add up the intermediate calculations
