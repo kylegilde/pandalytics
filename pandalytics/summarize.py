@@ -5,7 +5,7 @@ from pandalytics.transform import format_percentage
 
 
 def value_counts_pct(
-        s: pd.Series, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
+    s: pd.Series, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
 ) -> pd.Series:
     """
     Count Values by their Percentage
@@ -25,16 +25,17 @@ def value_counts_pct(
         s.value_counts(dropna=dropna)
         .to_frame("n")
         .assign(
-            pct=lambda df: format_percentage(df.n.div(df.n.sum()),
-                                             n_decimals=n_decimals)
+            pct=lambda df: format_percentage(
+                df.n.div(df.n.sum()), n_decimals=n_decimals
+            )
         )
     )
 
 
 def count_nas(
-        df: pd.DataFrame,
-        n_decimals: Optional[int] = 2,
-        use_inf_as_na: Optional[bool] = True,
+    df: pd.DataFrame,
+    n_decimals: Optional[int] = 2,
+    use_inf_as_na: Optional[bool] = True,
 ) -> pd.DataFrame:
     """
     Count the NAs in your DF including the Indices
@@ -67,7 +68,7 @@ def count_nas(
 
 
 def count_unique(
-        df: pd.DataFrame, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
+    df: pd.DataFrame, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
 ) -> pd.DataFrame:
     """
     Count the Unique Values in your DataFrame
@@ -87,7 +88,7 @@ def count_unique(
         .sort_values(ascending=False)
         .to_frame(name="n_unique")
         .assign(
-            pct_unique=lambda df1: df1.n_unique.div(df.shape[0]).pipe(
+            pct_unique=lambda _df: _df.n_unique.div(df.shape[0]).pipe(
                 format_percentage, n_decimals=n_decimals
             )
         )
