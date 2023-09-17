@@ -152,12 +152,12 @@ def get_datetime_attribute(s: pd.Series, attribute: str) -> pd.Series:
     the attribute Series
     """
     if isinstance(s, pd.DatetimeIndex):
-        raise ValueError("get_datetime_attribute won't work with a DatetimeIndex. "
-                         "Use .to_series() to convert it to a Series")
+        raise ValueError(
+            "get_datetime_attribute won't work with a DatetimeIndex. "
+            "Use .to_series() to convert it to a Series"
+        )
 
-    return (
-        s.dt.isocalendar().week if attribute == "week" else getattr(s.dt, attribute)
-    )
+    return s.dt.isocalendar().week if attribute == "week" else getattr(s.dt, attribute)
 
 
 def get_datetime_attributes(
@@ -226,11 +226,8 @@ def count_fractional_business_days(
     Returns
     -------
     Series
-    start_dt_series, end_dt_series = df_pytest.date_col_2, df_pytest.date_col_2
+    start_dt_series, end_dt_series = df_pytest.date_col_3, df_pytest.date_col_2
     """
-    start_dt_series, end_dt_series = pd.to_datetime(start_dt_series), pd.to_datetime(
-        end_dt_series
-    )
 
     # start the intermediate calculations
     business_hours_per_day = business_hour_end - business_hour_start
@@ -246,43 +243,43 @@ def count_fractional_business_days(
     whole_bdays = np.busday_count(
         start_dt_series.values.astype("datetime64[D]"),
         end_dt_series.values.astype("datetime64[D]"),
-        holidays=holidays.values,
+        holidays=holidays.values.astype("datetime64[D]"),
     )
 
     # Find out if the start and end dates are business days
     bday_fn = partial(
         create_bday_flag,
         drop_holidays=drop_holidays,
-        only_major_holidays=only_major_holidays
+        only_major_holidays=only_major_holidays,
     )
-    start_dt_loss = bday_fn(start_dt_series).astype("Uint8")
-    end_dt_gain = bday_fn(end_dt_series).astype("Uint8")
+    start_dt_loss = bday_fn(start_dt_series).astype("float")
+    end_dt_gain = bday_fn(end_dt_series).astype("float")
 
     # If the start date is a business day, calculate partially lost business days
     # that preceded the start time. Otherwise, it will be zero.
     start_dt_loss.mask(
-        lambda s: s,
+        lambda s: s == 1,
         (
-            business_hour_end
-            - start_dt_series.dt.hour
-            - start_dt_series.dt.minute.div(60)
+                business_hour_end
+                - start_dt_series.dt.hour
+                - start_dt_series.dt.minute.div(60)
         )
         .div(business_hours_per_day)
         .clip(0, 1)  # Handles where the current hour < business start hour
         .sub(1),
-        inplace=True
+        inplace=True,
     )
 
     # this adds the partial bday that occurs on the end date
     end_dt_gain.mask(
-        lambda s: s,
+        lambda s: s == 1,
         (
             end_dt_series.dt.hour.add(end_dt_series.dt.minute.div(60))
             .sub(business_hour_start)
             .div(business_hours_per_day)
             .clip(0, 1)  # Handles where the current hour < business start hour
         ),
-        inplace=True
+        inplace=True,
     )
 
     # add up the intermediate calculations
