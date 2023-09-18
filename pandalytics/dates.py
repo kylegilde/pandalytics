@@ -166,7 +166,7 @@ def get_datetime_attributes(
 ) -> pd.DataFrame:
     """
     Returns the Numeric and Boolean DateTime Attribute Values as a DataFrame
-    
+
     Parameters
     ----------
     s: a datetime Series
