@@ -94,7 +94,6 @@ def create_bday_flag(
     boolean Series
 
     """
-
     boolean_mask = dt_series.dt.day_of_week.lt(5)
 
     if drop_holidays:
@@ -167,12 +166,17 @@ def get_datetime_attributes(
 ) -> pd.DataFrame:
     """
     Returns the Numeric and Boolean DateTime Attribute Values as a DataFrame
-
-    :param s: a datetime Series
-    :param attributes_to_include: a list or set of attributes to include.
+    
+    Parameters
+    ----------
+    s: a datetime Series
+    attributes_to_include: a list or set of attributes to include.
         If None, use all except the specified exclusions
-    :param prefix_separator: the string to use as a separator between the Series name and attribute name
-    :return: a DataFrame
+    prefix_separator: the string to use as a separator between the Series name and attribute name
+
+    Returns
+    -------
+    a DataFrame
 
     FutureWarning: Series.dt.weekofyear and Series.dt.week have been deprecated.  Please use Series.dt.isocalendar().week instead.
     """
