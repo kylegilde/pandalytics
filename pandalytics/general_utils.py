@@ -3,6 +3,30 @@ from typing import Callable
 import inspect
 
 
+def timing(f: Callable):
+    """
+    A decorator that measures & prints the duration of a function or method.
+    It also prints the kwargs that are passed but not the positional args.
+    """
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        print(f"\n\nCalling {f.__name__} ---------->\n\n{kwargs = }")
+        start = time()
+        result = f(*args, **kwargs)
+        seconds = time() - start
+
+        duration = (
+            f"{seconds:,.1f} seconds"
+            if seconds < 60
+            else f"{seconds / 60:,.1f} minutes"
+        )
+        print(f"\n{f.__name__} ----------> {duration}\n\n")
+
+        return result
+
+    return wrap
+
+
 def safe_partial(func: Callable, *args, **kwargs):
     """
     Allows you to safely pass kwarg dictionaries to functions or methods that validate whether
