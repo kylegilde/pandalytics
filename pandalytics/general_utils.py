@@ -1,4 +1,5 @@
-from functools import partial
+from functools import partial, wraps
+from time import time
 from typing import Callable
 import inspect
 
