@@ -1,8 +1,43 @@
 from functools import partial, wraps
 from time import time
-from typing import Callable
+from typing import Callable, Union, List, Tuple, Optional
 import inspect
 
+from tqdm import tqdm
+import pandas as pd
+
+
+def get_time_trials(
+    s: pd.Series, 
+    func: Callable, 
+    s_name: Optional[str] = "", 
+    percentiles: Union[List, Tuple] = (.75, .95, .99),
+    **kwargs
+):
+    """
+    Get the percentiles of your function's duration in milliseconds
+    
+    """
+    
+    times = []
+    for search in tqdm(s):
+        start = time()
+        func(search, **kwargs)
+        stop = time()
+        times.append(stop - start)
+        
+    times = pd.Series(times)
+    longest_item_idx = times.idxmax()
+    longest_item  = s.iloc[longest_item_idx]
+    
+    print(f"{longest_item=}")
+    
+    return (
+        times.mul(1000)
+        .describe(percentiles=percentiles)
+        .rename(s_name)
+        .to_frame()
+    )
 
 def timing(f: Callable):
     """
