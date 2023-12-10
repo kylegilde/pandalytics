@@ -8,7 +8,7 @@ import pandas as pd
 
 
 def get_time_trials(
-    s: pd.Series, 
+    arr: pd.Series, 
     func: Callable, 
     s_name: Optional[str] = "", 
     percentiles: Union[List, Tuple] = (.75, .95, .99),
@@ -18,17 +18,24 @@ def get_time_trials(
     Get the percentiles of your function's duration in milliseconds
     
     """
+    arr = pd.Series(arr)
     
     times = []
-    for search in tqdm(s):
-        start = time()
-        func(search, **kwargs)
-        stop = time()
+    for x in tqdm(arr):
+        if isinstance(x, dict):
+            start = time()
+            func(**x, **kwargs)
+            stop = time()
+        else:
+            start = time()
+            func(x, **kwargs)
+            stop = time()
+            
         times.append(stop - start)
         
     times = pd.Series(times)
     longest_item_idx = times.idxmax()
-    longest_item  = s.iloc[longest_item_idx]
+    longest_item  = arr.iloc[longest_item_idx]
     
     print(f"{longest_item=}")
     
