@@ -88,7 +88,7 @@ def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = "_"):
     """
 
     df.columns = (
-        df.columns.to_flat_index().to_series().pipe(lambda s: s.name + sep + s).values
+        df.columns.to_flat_index().to_series().apply(lambda t: str(t[1]) + sep + str(t[0])).values
     )
 
     return df
