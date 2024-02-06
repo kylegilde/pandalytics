@@ -152,6 +152,17 @@ def format_percentage(s: pd.Series, n_decimals: Optional[int] = 2) -> pd.Series:
     return s.apply(lambda x: f"{x:.{n_decimals}%}").astype("string")
 
 
+def move_column(df: pd.DataFrame, col_name: str, new_position: Optional[int] = 0) -> pd.DataFrame:
+    """
+    Move column to a certain position among the other columns
+    """
+    
+    col_values = df.pop(col_name)
+    df.insert(new_position, col_name, col_values)
+    
+    return df
+    
+
 def change_display(
     min_rows: Optional[int] = 25,
     max_rows: Optional[int] = 50,
