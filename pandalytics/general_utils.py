@@ -11,7 +11,8 @@ def get_time_trials(
     arr: pd.Series, 
     func: Callable, 
     s_name: Optional[str] = "", 
-    percentiles: Union[List, Tuple] = (.75, .95, .99),
+    weights: Optional[pd.Series] = None,
+    percentiles: Union[List, Tuple] = (.75, .95, .97, .99, .999),
     **kwargs
 ):
     """
@@ -33,6 +34,23 @@ def get_time_trials(
             
         times.append(stop - start)
         
+    if isinstance(weights, pd.Series):
+        
+        assert len(weights) == len(arr), "These lengths are not matching"
+        
+        print("Using weights")
+        times_weighted = []
+        for t, w in zip(times, weights):
+            times_weighted.extend([t] * w)
+            
+        print(f"{len(times_weighted)=:,}")
+        
+        times_weighted = pd.Series(times_weighted)
+        
+    else:
+        
+        times_weighted = pd.Series(times)
+        
     times = pd.Series(times)
     longest_item_idx = times.idxmax()
     longest_item  = arr.iloc[longest_item_idx]
@@ -40,7 +58,7 @@ def get_time_trials(
     print(f"{longest_item=}")
     
     return (
-        times.mul(1000)
+        times_weighted.mul(1000)
         .describe(percentiles=percentiles)
         .rename(s_name)
         .to_frame()
