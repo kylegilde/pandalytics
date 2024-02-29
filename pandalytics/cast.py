@@ -322,6 +322,40 @@ def cast_to_boolean(
     ).cast(df, cols_to_check=cols_to_check)
 
 
+def cast_to_string(
+    df: pd.DataFrame,
+    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+        "object",
+    ),
+    cols_to_check: Optional[Union[List, Tuple]] = None,
+    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
+    verbose: Optional[bool] = True,
+):
+    """
+    Cast columns to the string dtype
+    Use this first before trying to use cast_to_category on actually Python object columns
+
+    Parameters
+    ----------
+    df: DataFrame
+    cols_to_check: a subset of columns to check.
+    dtypes_to_check: the dtypes that should be checked.
+    errors: How the errors should be handled
+    verbose: Should the dtype changes be printed?
+
+    Returns
+    -------
+    A DataFrame with string dtypes
+    
+    """
+    return DtypeCasting(
+        dtypes_to_check=dtypes_to_check,
+        new_dtype="string",
+        errors=errors,
+        verbose=verbose,
+    ).cast(df, cols_to_check=cols_to_check)
+
+
 def cast_to_category(
     df: pd.DataFrame,
     dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
