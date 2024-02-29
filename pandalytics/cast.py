@@ -362,6 +362,7 @@ def cast_to_category(
         "object",
         "string",
     ),
+    coerce_objects: Optional[bool] = True,
     cols_to_check: Optional[Union[List, Tuple]] = None,
     errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
     verbose: Optional[bool] = True,
@@ -381,6 +382,22 @@ def cast_to_category(
     -------
     A DataFrame with categorical dtypes
     """
+
+    if (
+        coerce_objects
+        and "object" in dtypes_to_check 
+        and "object" in df.columns.dtypes.astype("string")
+    ):    
+        if verbose:
+            print("Coercing objects")
+            
+        df = DtypeCasting(
+            dtypes_to_check="object",
+            new_dtype="string",
+            errors=errors,
+            verbose=verbose,
+        ).cast(df, cols_to_check=cols_to_check)
+    
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         new_dtype="category",
