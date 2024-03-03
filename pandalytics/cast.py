@@ -383,20 +383,15 @@ def cast_to_category(
     A DataFrame with categorical dtypes
     """
 
-    if (
-        coerce_objects
-        and "object" in dtypes_to_check 
-        and "object" in df.columns.dtypes.astype("string")
-    ):    
-        if verbose:
-            print("Coercing objects")
+    # if (
+    #     coerce_objects
+    #     and "object" in dtypes_to_check 
+    #     and "object" in df.columns.dtypes.astype("string")
+    # ):    
+    #     if verbose:
+    #         print("Coercing objects")
             
-        df = DtypeCasting(
-            dtypes_to_check="object",
-            new_dtype="string",
-            errors=errors,
-            verbose=verbose,
-        ).cast(df, cols_to_check=cols_to_check)
+    #     df = cast_to_string(df, cols_to_check=cols_to_check, verbose=verbose)
     
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
