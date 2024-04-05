@@ -159,7 +159,7 @@ def create_unique_daily_filename(
     if exclude_kwargs:
         fn_parameters = fn_parameters - {"kwargs"}
 
-    fn_parameters_and_values_string = str({k: v for k, v in local_variables.items() if k in sorted(fn_parameters)})
+    fn_parameters_and_values_string = fn.__name__ + str({k: v for k, v in local_variables.items() if k in sorted(fn_parameters)})
     
     m = hashlib.sha256()
     m.update(fn_parameters_and_values_string.encode('utf-8'))
