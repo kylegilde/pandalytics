@@ -142,7 +142,7 @@ def create_unique_filename(
 
     Parameters
     ----------
-    fn: functions
+    fn: function
     exclude_kwargs: use kwargs to create the string?
     file_type: type of file
 
