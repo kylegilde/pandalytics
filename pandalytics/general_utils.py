@@ -2,6 +2,7 @@ from functools import partial, wraps
 from time import time
 from typing import Callable, Union, List, Tuple, Optional
 import inspect
+import hashlib
 
 from tqdm import tqdm
 import pandas as pd
@@ -128,14 +129,15 @@ def replace_none(variable: object, replacement_value: object):
     return replacement_value if variable is None else variable
 
 
-def create_unique_filename(
+def create_unique_daily_filename(
     fn: Callable, 
+    path: Optional[str] = "",
     exclude_kwargs: Optional[bool] = True, 
     file_type: Optional[str] = "parquet", 
     **local_variables
 ) -> str:
     """
-    Creates a daily filename containing all of the variables that you pass to it.
+    Creates a daily filename containing a hashed version of all of the key-value pairs
     
     You can use this inside of a function.
     This is super useful for running and saving a local copy of a specific SQL query once and only once a day.
@@ -150,15 +152,17 @@ def create_unique_filename(
     -------
     string
     
-    """
-    
+    """    
     today = str(pd.Timestamp.now().date())
-    fn_args = set(inspect.signature(fn).parameters)
+    fn_parameters = set(inspect.signature(fn).parameters)
     
     if exclude_kwargs:
-        fn_args = fn_args - {"kwargs"}
+        fn_parameters = fn_parameters - {"kwargs"}
 
-    # concatenate all of the key-value pairs into a string
-    fn_parameters_string = ";".join(f"{k}={v}" for k, v in local_variables.items() if k in sorted(fn_args))
+    fn_parameters_and_values_string = str({k: v for k, v in local_variables.items() if k in sorted(fn_parameters)})
     
-    return f"{today};{fn_parameters_string}.{file_type}"
+    m = hashlib.sha256()
+    m.update(fn_parameters_and_values_string.encode('utf-8'))
+    hashed_fn_parameters_and_values_string = m.hexdigest()
+    
+    return f"{path}{today}_{hashed_fn_parameters_and_values_string}.{file_type}"
