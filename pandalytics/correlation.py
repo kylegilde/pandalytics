@@ -1,12 +1,11 @@
-from typing import Optional, Literal, Union
 from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
-from numpy.typing import ArrayLike
 import pandas as pd
-
 import plotly.express as px
 import plotly.graph_objects as go
+from numpy.typing import ArrayLike
 
 
 @dataclass
@@ -24,10 +23,10 @@ class PairwiseCorrelations:
 
     """
 
-    y_col: Optional[Union[int, float, str]] = None
-    method: Optional[Literal["pearson", "kendall", "spearman"]] = "spearman"
-    dtypes: Optional[ArrayLike] = ("number", "bool", "datetime", "datetimetz")
-    sep: Optional[str] = " & "
+    y_col: int | float | str | None = None
+    method: Literal["pearson", "kendall", "spearman"] | None = "spearman"
+    dtypes: ArrayLike | None = ("number", "bool", "datetime", "datetimetz")
+    sep: str | None = " & "
 
     def _coersive_corr(self, s1, s2):
         return (
@@ -87,10 +86,10 @@ class PairwiseCorrelations:
         return self.df_corr
 
     def plot(
-            self,
-            df: pd.DataFrame,
-            min_abs_correlation: Optional[float] = None,
-            **kwargs,
+        self,
+        df: pd.DataFrame,
+        min_abs_correlation: float | None = None,
+        **kwargs,
     ) -> go.Figure:
         """
 
@@ -107,9 +106,7 @@ class PairwiseCorrelations:
         if not hasattr(self, "df_corr"):
             self.transform(df)
 
-        corr_type = (
-            f"{self.y_col} Correlations" if self.y_col else "Pairwise Correlations"
-        )
+        corr_type = f"{self.y_col} Correlations" if self.y_col else "Pairwise Correlations"
 
         if min_abs_correlation:
             max_abs_value: float = self.df_corr.abs_value.max()
@@ -119,14 +116,9 @@ class PairwiseCorrelations:
                     f"maximum absolute value of {max_abs_value}."
                 )
 
-            df_plot = self.df_corr.loc[
-                lambda _df: _df.abs_value.ge(min_abs_correlation)
-            ]
+            df_plot = self.df_corr.loc[lambda _df: _df.abs_value.ge(min_abs_correlation)]
 
-            title = (
-                f"Showing {df_plot.shape[0]} of {self.df_corr.shape[0]:,}"
-                f" {corr_type}"
-            )
+            title = f"Showing {df_plot.shape[0]} of {self.df_corr.shape[0]:,} {corr_type}"
         else:
             df_plot = self.df_corr
             title = f"{df_plot.shape[0]} {corr_type}"

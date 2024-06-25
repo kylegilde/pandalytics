@@ -1,8 +1,6 @@
-from typing import Optional, List
 from dataclasses import dataclass
 
 import pandas as pd
-
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -26,11 +24,11 @@ class FeatureImportancePlot:
     df_importance: Contains columns feature, value, ranking, ranked_feature & text
     """
 
-    features: List
-    importance_values: List
-    max_scale: Optional[bool] = True
-    n_decimals_displayed: Optional[int] = 1
-    str_pad_width: Optional[int] = 15
+    features: list
+    importance_values: list
+    max_scale: bool | None = True
+    n_decimals_displayed: int | None = 1
+    str_pad_width: int | None = 15
 
     def transform(self):
         self.df_importance: pd.DataFrame = (
@@ -39,9 +37,7 @@ class FeatureImportancePlot:
             .reset_index()
             .sort_values(["value", "feature"], ignore_index=True)
             .assign(
-                ranking=lambda _df: _df["value"]
-                .rank(method="dense", ascending=False)
-                .astype(int)
+                ranking=lambda _df: _df["value"].rank(method="dense", ascending=False).astype(int)
             )
             # add the rank to the feature name
             .assign(
@@ -53,13 +49,9 @@ class FeatureImportancePlot:
 
         if self.max_scale:
             max_value = self.df_importance["value"].max()
-            self.df_importance["value"] = (
-                self.df_importance["value"].div(max_value).mul(100)
-            )
+            self.df_importance["value"] = self.df_importance["value"].div(max_value).mul(100)
 
-        self.df_importance["text"] = self.df_importance["value"].round(
-            self.n_decimals_displayed
-        )
+        self.df_importance["text"] = self.df_importance["value"].round(self.n_decimals_displayed)
 
         self.n_features = len(self.df_importance)
 
@@ -67,11 +59,11 @@ class FeatureImportancePlot:
 
     def plot(
         self,
-        top_n_features: Optional[int] = None,
-        height_per_feature: Optional[int] = 25,
-        width: Optional[int] = 750,
-        yaxes_tickfont_family: Optional[str] = "Courier New, monospace",
-        yaxes_tickfont_size: Optional[int] = 15,
+        top_n_features: int | None = None,
+        height_per_feature: int | None = 25,
+        width: int | None = 750,
+        yaxes_tickfont_family: str | None = "Courier New, monospace",
+        yaxes_tickfont_size: int | None = 15,
         **kwargs,
     ) -> go.Figure:
         """
@@ -110,9 +102,7 @@ class FeatureImportancePlot:
         if isinstance(top_n_features, int) and self.n_features > top_n_features:
             df_plot = df_plot[lambda df: df.ranking.le(top_n_features)]
             if create_title:
-                kwargs[
-                    "title"
-                ] = f"Top {top_n_features} (of {self.n_features}) Feature Importances"
+                kwargs["title"] = f"Top {top_n_features} (of {self.n_features}) Feature Importances"
 
         # create the plot
         return (
@@ -125,7 +115,8 @@ class FeatureImportancePlot:
                 **kwargs,
             )
             # center the title and do not show the legend
-            .update_layout(title_x=0.5, showlegend=False).update_yaxes(
+            .update_layout(title_x=0.5, showlegend=False)
+            .update_yaxes(
                 tickfont=dict(family=yaxes_tickfont_family, size=yaxes_tickfont_size),
                 title="",
             )

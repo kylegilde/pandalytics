@@ -1,18 +1,17 @@
 """
 Contains custom plotting functions
 """
-from functools import partial
-from typing import Optional, Union, Dict, Callable
-from numpy.typing import ArrayLike
+
 import re
 import warnings
+from collections.abc import Callable
+from functools import partial
 
 import numpy as np
 import pandas as pd
-
 import plotly.express as px
 import plotly.graph_objects as go
-
+from numpy.typing import ArrayLike
 
 LINE_PLOT_AWESOME_DEFAULTS = dict(
     update_layout_dict=dict(
@@ -51,7 +50,7 @@ BAR_PLOT_AWESOME_DEFAULTS = dict(
 )
 
 
-def _get_y_values(kwarg_dict: Dict) -> ArrayLike:
+def _get_y_values(kwarg_dict: dict) -> ArrayLike:
     """
     Get the y values from the DataFrame or the y argument
     Parameters
@@ -79,8 +78,8 @@ def _get_y_values(kwarg_dict: Dict) -> ArrayLike:
 
 def _infer_yaxes_tickformat(
     y_values: ArrayLike,
-    small_std_threshold: Union[float, int],
-    title: Optional[str] = "",
+    small_std_threshold: float | int,
+    title: str | None = "",
 ) -> str:
     """
 
@@ -121,11 +120,11 @@ def _infer_yaxes_tickformat(
 
 
 def _create_update_dicts(
-    update_layout_dict: Dict,
-    update_xaxes_dict: Dict,
-    update_yaxes_dict: Dict,
-    update_traces_dict: Dict,
-) -> Dict:
+    update_layout_dict: dict,
+    update_xaxes_dict: dict,
+    update_yaxes_dict: dict,
+    update_traces_dict: dict,
+) -> dict:
     """
     Store the "update dict" parameters in a dict and replace None with an empty dict
 
@@ -153,7 +152,7 @@ def _create_update_dicts(
     return update_dicts
 
 
-def _add_new_keys(source_dict: Dict, target_dict: Dict) -> None:
+def _add_new_keys(source_dict: dict, target_dict: dict) -> None:
     """
     If the key does not exist in the target dict, add the key-value from the source dict.
 
@@ -174,9 +173,7 @@ def _add_new_keys(source_dict: Dict, target_dict: Dict) -> None:
     return None
 
 
-def _update_all_dicts(
-    awesome_defaults: Dict, update_dicts: Dict, kwarg_dict: Dict
-) -> None:
+def _update_all_dicts(awesome_defaults: dict, update_dicts: dict, kwarg_dict: dict) -> None:
     """
     Update the update_dicts and kwarg_dict using awesome_defaults dict
 
@@ -201,10 +198,10 @@ def _update_all_dicts(
 
 def _create_figure(
     px_fig_func: Callable,
-    update_layout_dict: Dict,
-    update_xaxes_dict: Dict,
-    update_yaxes_dict: Dict,
-    update_traces_dict: Dict,
+    update_layout_dict: dict,
+    update_xaxes_dict: dict,
+    update_yaxes_dict: dict,
+    update_traces_dict: dict,
     **kwargs,
 ) -> go.Figure:
     """
@@ -234,12 +231,12 @@ def _create_figure(
 def plot_line_plot(
     use_awesome_defaults: bool = True,
     infer_yaxes_tickformat: bool = True,
-    small_std_threshold: Optional[Union[int, float]] = 1,
-    zero_line_threshold: Optional[Union[int, float]] = 0.05,
-    update_layout_dict: Optional[Dict] = None,
-    update_xaxes_dict: Optional[Dict] = None,
-    update_yaxes_dict: Optional[Dict] = None,
-    update_traces_dict: Optional[Dict] = None,
+    small_std_threshold: int | float | None = 1,
+    zero_line_threshold: int | float | None = 0.05,
+    update_layout_dict: dict | None = None,
+    update_xaxes_dict: dict | None = None,
+    update_yaxes_dict: dict | None = None,
+    update_traces_dict: dict | None = None,
     **kwargs,
 ) -> go.Figure:
     """
@@ -262,7 +259,7 @@ def plot_line_plot(
     px.line plot
     """
     # Store the "update dict" parameters in a dict and replace None with an empty dict
-    update_dicts: Dict = _create_update_dicts(
+    update_dicts: dict = _create_update_dicts(
         update_layout_dict, update_xaxes_dict, update_yaxes_dict, update_traces_dict
     )
 
@@ -286,10 +283,7 @@ def plot_line_plot(
 
     # If zero_line_threshold is a number & if any value is less than zero,
     # then add a thick black line at zero.
-    if (
-        isinstance(zero_line_threshold, (int, float))
-        and (y_values < zero_line_threshold).any()
-    ):
+    if isinstance(zero_line_threshold, (int, float)) and (y_values < zero_line_threshold).any():
         fig.add_hline(y=0, line_width=3, line_dash="dash")
 
     return fig
@@ -297,11 +291,11 @@ def plot_line_plot(
 
 def plot_bar_plot(
     use_awesome_defaults: bool = True,
-    update_layout_dict: Optional[Dict] = None,
-    update_xaxes_dict: Optional[Dict] = None,
-    update_yaxes_dict: Optional[Dict] = None,
-    update_traces_dict: Optional[Dict] = None,
-    n_text_decimals: Optional[Union[int, float]] = 3,
+    update_layout_dict: dict | None = None,
+    update_xaxes_dict: dict | None = None,
+    update_yaxes_dict: dict | None = None,
+    update_traces_dict: dict | None = None,
+    n_text_decimals: int | float | None = 3,
     **kwargs,
 ) -> go.Figure:
     """
@@ -325,7 +319,7 @@ def plot_bar_plot(
     """
 
     # Store the "update dict" parameters in a dict and replace None with an empty dict
-    update_dicts: Dict = _create_update_dicts(
+    update_dicts: dict = _create_update_dicts(
         update_layout_dict, update_xaxes_dict, update_yaxes_dict, update_traces_dict
     )
 
@@ -333,11 +327,7 @@ def plot_bar_plot(
 
     # If `text` is not provided and `n_text_decimals` is greater than 0,
     # try to add some plot text on the bars
-    if (
-        "text" not in kwargs
-        and n_text_decimals >= 0
-        and pd.api.types.is_numeric_dtype(y_values)
-    ):
+    if "text" not in kwargs and n_text_decimals >= 0 and pd.api.types.is_numeric_dtype(y_values):
         kwargs["text"] = y_values.round(n_text_decimals)
 
     if use_awesome_defaults:
@@ -349,7 +339,7 @@ def plot_bar_plot(
 def plot_many_plots(
     df: pd.DataFrame,
     plot_func: Callable,
-    iterate_col: Optional[str] = "metric",
+    iterate_col: str | None = "metric",
     fig_func: Callable = None,
     **plot_func_kwargs,
 ) -> None:

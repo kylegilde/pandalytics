@@ -162,7 +162,7 @@ def test_cast_dict_to_columns():
 
 
 def test_flatten_column_names():
-    df_input = pd.DataFrame(np.arange(16).reshape(4, 4))
+    df_input = pd.DataFrame(np.arange(16).reshape(4, 4), dtype="int32")
     df_input.columns = pd.MultiIndex.from_product([[1, 2], ["A", "B"]])
 
     df_expected = pd.DataFrame(
@@ -188,9 +188,10 @@ def test_sort_all_values():
 
     # Revert df_test back to df_input
     df_revert = sort_all_values(df_test, ignore_index=True, ascending=False)
-    pd.testing.assert_frame_equal(
-        df_revert, df_input
-    ), "Descending sort_all_values did not work."
+    (
+        pd.testing.assert_frame_equal(df_revert, df_input),
+        "Descending sort_all_values did not work.",
+    )
 
 
 def test_drop_single_value_cols(df_pytest):

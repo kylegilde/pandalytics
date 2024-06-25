@@ -7,6 +7,8 @@ black>=23.3.0
 pytest>=7.4.0
 pyarrow
 humanize
+ruff
+uv
 
 # TODO: coverage, typeguard>=4.0.0
 # TODO: typeguard or mypy

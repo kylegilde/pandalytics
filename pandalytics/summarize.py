@@ -1,11 +1,10 @@
-from typing import Optional, Union
-import pandas as pd
 
+import pandas as pd
 from pandalytics.transform import format_percentage
 
 
 def value_counts_pct(
-    s: pd.Series, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
+    s: pd.Series, n_decimals: int | None = 2, dropna: bool | None = False
 ) -> pd.Series:
     """
     Count Values by their Percentage
@@ -23,18 +22,14 @@ def value_counts_pct(
     return (
         s.value_counts(dropna=dropna)
         .to_frame("n")
-        .assign(
-            pct=lambda df: format_percentage(
-                df.n.div(df.n.sum()), n_decimals=n_decimals
-            )
-        )
+        .assign(pct=lambda df: format_percentage(df.n.div(df.n.sum()), n_decimals=n_decimals))
     )
 
 
 def count_nas(
     df: pd.DataFrame,
-    n_decimals: Optional[int] = 2,
-    use_inf_as_na: Optional[bool] = True,
+    n_decimals: int | None = 2,
+    use_inf_as_na: bool | None = True,
 ) -> pd.DataFrame:
     """
     Count the NAs in your DF including the Indices
@@ -67,7 +62,7 @@ def count_nas(
 
 
 def count_unique(
-    df: pd.DataFrame, n_decimals: Optional[int] = 2, dropna: Optional[bool] = False
+    df: pd.DataFrame, n_decimals: int | None = 2, dropna: bool | None = False
 ) -> pd.DataFrame:
     """
     Count the Unique Values in your DataFrame
@@ -94,7 +89,7 @@ def count_unique(
     )
 
 
-def count_duplicates(df_or_s: Union[pd.DataFrame, pd.Series]) -> int:
+def count_duplicates(df_or_s: pd.DataFrame | pd.Series) -> int:
     """
     Count the instances of duplicated values
 

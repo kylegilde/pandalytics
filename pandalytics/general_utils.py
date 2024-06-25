@@ -1,27 +1,27 @@
+import hashlib
+import inspect
+from collections.abc import Callable
 from functools import partial, wraps
 from time import time
-from typing import Callable, Union, List, Tuple, Optional
-import inspect
-import hashlib
 
-from tqdm import tqdm
 import pandas as pd
+from tqdm import tqdm
 
 
 def get_time_trials(
-    arr: pd.Series, 
-    func: Callable, 
-    s_name: Optional[str] = "", 
-    weights: Optional[pd.Series] = None,
-    percentiles: Union[List, Tuple] = (.75, .95, .97, .99, .999),
-    **kwargs
+    arr: pd.Series,
+    func: Callable,
+    s_name: str | None = "",
+    weights: pd.Series | None = None,
+    percentiles: list | tuple = (0.75, 0.95, 0.97, 0.99, 0.999),
+    **kwargs,
 ):
     """
     Get the percentiles of your function's duration in milliseconds
-    
+
     """
     arr = pd.Series(arr)
-    
+
     times = []
     for x in tqdm(arr):
         if isinstance(x, dict):
@@ -32,44 +32,39 @@ def get_time_trials(
             start = time()
             func(x, **kwargs)
             stop = time()
-            
+
         times.append(stop - start)
-        
+
     if isinstance(weights, pd.Series):
-        
         assert len(weights) == len(arr), "These lengths are not matching"
-        
+
         print("Using weights")
         times_weighted = []
         for t, w in zip(times, weights):
             times_weighted.extend([t] * w)
-            
+
         print(f"{len(times_weighted)=:,}")
-        
+
         times_weighted = pd.Series(times_weighted)
-        
+
     else:
-        
         times_weighted = pd.Series(times)
-        
+
     times = pd.Series(times)
     longest_item_idx = times.idxmax()
-    longest_item  = arr.iloc[longest_item_idx]
-    
+    longest_item = arr.iloc[longest_item_idx]
+
     print(f"{longest_item=}")
-    
-    return (
-        times_weighted.mul(1000)
-        .describe(percentiles=percentiles)
-        .rename(s_name)
-        .to_frame()
-    )
+
+    return times_weighted.mul(1000).describe(percentiles=percentiles).rename(s_name).to_frame()
+
 
 def timing(f: Callable):
     """
     A decorator that measures & prints the duration of a function or method.
     It also prints the kwargs that are passed but not the positional args.
     """
+
     @wraps(f)
     def wrap(*args, **kwargs):
         print(f"\n\nCalling {f.__name__} ---------->\n\n{kwargs = }")
@@ -77,11 +72,7 @@ def timing(f: Callable):
         result = f(*args, **kwargs)
         seconds = time() - start
 
-        duration = (
-            f"{seconds:,.1f} seconds"
-            if seconds < 60
-            else f"{seconds / 60:,.1f} minutes"
-        )
+        duration = f"{seconds:,.1f} seconds" if seconds < 60 else f"{seconds / 60:,.1f} minutes"
         print(f"\n{f.__name__} ----------> {duration}\n\n")
 
         return result
@@ -130,15 +121,15 @@ def replace_none(variable: object, replacement_value: object):
 
 
 def create_unique_daily_filename(
-    fn: Callable, 
-    path: Optional[str] = "",
-    exclude_kwargs: Optional[bool] = True, 
-    file_type: Optional[str] = "parquet", 
-    **local_variables
+    fn: Callable,
+    path: str | None = "",
+    exclude_kwargs: bool | None = True,
+    file_type: str | None = "parquet",
+    **local_variables,
 ) -> str:
     """
     Creates a daily filename containing a hashed version of all of the key-value pairs
-    
+
     You can use this inside of a function.
     This is super useful for running and saving a local copy of a specific SQL query once and only once a day.
 
@@ -151,18 +142,20 @@ def create_unique_daily_filename(
     Returns
     -------
     string
-    
-    """    
+
+    """
     today = str(pd.Timestamp.now().date())
     fn_parameters = set(inspect.signature(fn).parameters)
-    
+
     if exclude_kwargs:
         fn_parameters = fn_parameters - {"kwargs"}
 
-    fn_parameters_and_values_string = str({k: v for k, v in local_variables.items() if k in sorted(fn_parameters)})
-    
+    fn_parameters_and_values_string = str(
+        {k: v for k, v in local_variables.items() if k in sorted(fn_parameters)}
+    )
+
     m = hashlib.sha256()
-    m.update(fn_parameters_and_values_string.encode('utf-8'))
+    m.update(fn_parameters_and_values_string.encode("utf-8"))
     hashed_fn_parameters_and_values_string = m.hexdigest()
-    
+
     return f"{path}{today}_{fn.__name__}_{hashed_fn_parameters_and_values_string}.{file_type}"

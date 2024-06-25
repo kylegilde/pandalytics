@@ -1,13 +1,14 @@
-from typing import Union, Optional, List, Dict, Callable
+from collections.abc import Callable
+
 import pandas as pd
 
 
 def groupby_apply(
     df: pd.DataFrame,
-    groupby_cols: Union[str, int, float, List, pd.Series],
+    groupby_cols: str | int | float | list | pd.Series,
     apply_func: Callable,
-    observed: Optional[bool] = True,
-    dropna: Optional[bool] = False,
+    observed: bool | None = True,
+    dropna: bool | None = False,
     **kwargs,
 ) -> pd.DataFrame:
     """
@@ -47,7 +48,7 @@ pd.DataFrame.groupby_apply = groupby_apply
 
 
 def cast_dict_to_columns(
-    a_dict: Dict, key_col: Optional[str] = "key", value_col: Optional[str] = "value"
+    a_dict: dict, key_col: str | None = "key", value_col: str | None = "value"
 ) -> pd.DataFrame:
     """
 
@@ -69,7 +70,7 @@ def cast_dict_to_columns(
     return pd.Series(a_dict, name=value_col).rename_axis(key_col).reset_index()
 
 
-def flatten_column_names(df: pd.DataFrame, sep: Optional[str] = "_"):
+def flatten_column_names(df: pd.DataFrame, sep: str | None = "_"):
     """
 
     Concatenate MultiIndex Columns using the Separator String.
@@ -123,19 +124,15 @@ def drop_single_value_cols(df: pd.DataFrame, dropna: bool = False) -> pd.DataFra
 
     :return: DataFrame
     """
-    single_value_cols = (
-        df.nunique(dropna=dropna).loc[lambda x: x == 1].index.to_series().tolist()
-    )
+    single_value_cols = df.nunique(dropna=dropna).loc[lambda x: x == 1].index.to_series().tolist()
 
     if single_value_cols:
-        print(
-            f'\n\nDropping these single value columns:\n{",".join(single_value_cols)}\n\n'
-        )
+        print(f'\n\nDropping these single value columns:\n{",".join(single_value_cols)}\n\n')
 
     return df.drop(columns=single_value_cols)
 
 
-def format_percentage(s: pd.Series, n_decimals: Optional[int] = 2) -> pd.Series:
+def format_percentage(s: pd.Series, n_decimals: int | None = 2) -> pd.Series:
     """
     Formats a numeric Series as a percentage string
 
@@ -152,24 +149,24 @@ def format_percentage(s: pd.Series, n_decimals: Optional[int] = 2) -> pd.Series:
     return s.apply(lambda x: f"{x:.{n_decimals}%}").astype("string")
 
 
-def move_column(df: pd.DataFrame, col_name: str, new_position: Optional[int] = 0) -> pd.DataFrame:
+def move_column(df: pd.DataFrame, col_name: str, new_position: int | None = 0) -> pd.DataFrame:
     """
     Move column to a certain position among the other columns
     """
-    
+
     col_values = df.pop(col_name)
     df.insert(new_position, col_name, col_values)
-    
+
     return df
-    
+
 
 def change_display(
-    min_rows: Optional[int] = 25,
-    max_rows: Optional[int] = 50,
-    max_columns: Optional[int] = 100,
-    max_colwidth: Optional[int] = 400,
-    width: Optional[int] = 1000,
-    n_decimals: Optional[int] = 4,
+    min_rows: int | None = 25,
+    max_rows: int | None = 50,
+    max_columns: int | None = 100,
+    max_colwidth: int | None = 400,
+    width: int | None = 1000,
+    n_decimals: int | None = 4,
 ) -> pd.DataFrame:
     """
     Print more of your DataFrame by calling this function

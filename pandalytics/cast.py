@@ -1,10 +1,10 @@
-from typing import Optional, List, Tuple, Union, Callable, Literal, Dict
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Literal
 
+import humanize
 import numpy as np
 import pandas as pd
-import humanize
-
 from pandalytics.general_utils import safe_partial
 
 
@@ -23,17 +23,17 @@ class DtypeCasting:
     verbose: Should the dtype changes be printed?
     """
 
-    dtypes_to_check: Union[List, Tuple, str, object]
-    new_dtype: Optional[Union[str, object]] = None
-    coerce_func: Optional[Callable] = None
+    dtypes_to_check: list | tuple | str | object
+    new_dtype: str | object | None = None
+    coerce_func: Callable | None = None
     coerce_func_kws: dict = field(default_factory=dict)
-    errors: Optional[str] = "ignore"
-    verbose: Optional[bool] = True
+    errors: str | None = "ignore"
+    verbose: bool | None = True
 
     def cast(
         self,
         df: pd.DataFrame,
-        cols_to_check: Optional[Union[List, Tuple, str, int, float]] = None,
+        cols_to_check: list | tuple | str | int | float | None = None,
     ) -> pd.DataFrame:
         """
         Applies a casting / coersion to an entire DataFrame by column
@@ -59,9 +59,7 @@ class DtypeCasting:
 
         if self.verbose:
             casting_function = (
-                self.coerce_func.__name__
-                if self.coerce_func
-                else f"astype({self.new_dtype})"
+                self.coerce_func.__name__ if self.coerce_func else f"astype({self.new_dtype})"
             )
             print(f"Running {casting_function}")
 
@@ -122,9 +120,7 @@ class IntCasting:
         }
     )
 
-    df_int_metadata["pyarrow_dtypes"] = (
-        df_int_metadata.pandas_dtype.str.lower() + "[pyarrow]"
-    )
+    df_int_metadata["pyarrow_dtypes"] = df_int_metadata.pandas_dtype.str.lower() + "[pyarrow]"
 
     # df_int_metadata.melt(id_vars=["min_value", "max_value"], value_name="dtype_string",
     #                      var_name="backend").set_index("backend")
@@ -193,7 +189,7 @@ def get_memory_usage(df: pd.DataFrame) -> str:
 
 
 def get_dtype_changes(
-    df_new, old_dtypes, old_size: Optional[str] = None, verbose: Optional[bool] = True
+    df_new, old_dtypes, old_size: str | None = None, verbose: bool | None = True
 ):
     """
     Prints a DataFrame of dtype changes
@@ -236,14 +232,14 @@ def get_dtype_changes(
 
 def cast_to_numeric(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: list | tuple | str | object | None = (
         "object",
         "string",
     ),
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    downcast: Optional[Literal["integer", "signed", "unsigned", "float"]] = None,
-    verbose: Optional[bool] = True,
+    cols_to_check: list | tuple | None = None,
+    errors: Literal["ignore", "raise", "coerce"] | None = "ignore",
+    downcast: Literal["integer", "signed", "unsigned", "float"] | None = None,
+    verbose: bool | None = True,
 ):
     """
     Cast / Coerce columns to numeric dtypes
@@ -294,12 +290,12 @@ def to_boolean(s: pd.Series) -> pd.Series:
 
 def cast_to_boolean(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: list | tuple | str | object | None = (
         "object",
         "string",
     ),
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    verbose: Optional[bool] = True,
+    cols_to_check: list | tuple | None = None,
+    verbose: bool | None = True,
 ):
     """
     Cast columns to numeric dtypes
@@ -324,12 +320,10 @@ def cast_to_boolean(
 
 def cast_to_string(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
-        "object",
-    ),
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    verbose: Optional[bool] = True,
+    dtypes_to_check: list | tuple | str | object | None = ("object",),
+    cols_to_check: list | tuple | None = None,
+    errors: Literal["ignore", "raise", "coerce"] | None = "ignore",
+    verbose: bool | None = True,
 ):
     """
     Cast columns to the string dtype
@@ -346,7 +340,7 @@ def cast_to_string(
     Returns
     -------
     A DataFrame with string dtypes
-    
+
     """
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
@@ -358,14 +352,14 @@ def cast_to_string(
 
 def cast_to_category(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: list | tuple | str | object | None = (
         "object",
         "string",
     ),
-    coerce_objects: Optional[bool] = True,
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    verbose: Optional[bool] = True,
+    coerce_objects: bool | None = True,
+    cols_to_check: list | tuple | None = None,
+    errors: Literal["ignore", "raise", "coerce"] | None = "ignore",
+    verbose: bool | None = True,
 ):
     """
     Cast columns to categorical dtypes
@@ -385,14 +379,14 @@ def cast_to_category(
 
     # if (
     #     coerce_objects
-    #     and "object" in dtypes_to_check 
+    #     and "object" in dtypes_to_check
     #     and "object" in df.columns.dtypes.astype("string")
-    # ):    
+    # ):
     #     if verbose:
     #         print("Coercing objects")
-            
+
     #     df = cast_to_string(df, cols_to_check=cols_to_check, verbose=verbose)
-    
+
     return DtypeCasting(
         dtypes_to_check=dtypes_to_check,
         new_dtype="category",
@@ -403,13 +397,13 @@ def cast_to_category(
 
 def cast_to_datetime(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: list | tuple | str | object | None = (
         "object",
         "string",
     ),
-    cols_to_check: Optional[Union[List, Tuple]] = None,
-    errors: Optional[Literal["ignore", "raise", "coerce"]] = "ignore",
-    verbose: Optional[bool] = True,
+    cols_to_check: list | tuple | None = None,
+    errors: Literal["ignore", "raise", "coerce"] | None = "ignore",
+    verbose: bool | None = True,
 ):
     """
     Cast columns to datetime dtypes
@@ -469,7 +463,7 @@ def is_object_or_string(s: pd.Series) -> bool:
 
 
 def cast_dtype(
-    s: pd.Series, downcast: Optional[bool] = True, use_categories: Optional[bool] = True
+    s: pd.Series, downcast: bool | None = True, use_categories: bool | None = True
 ) -> pd.Series:
     """
     Dynamically coerces a Series to the correct dtype & by default, downcasts numeric dtypes
@@ -511,9 +505,7 @@ def cast_dtype(
     # a category
     if is_object_or_string(s):
         # If the Series cannot be coerced to a number, then try a datetime.
-        if pd.api.types.is_datetime64_any_dtype(
-            s := pd.to_datetime(s, errors="ignore")
-        ):
+        if pd.api.types.is_datetime64_any_dtype(s := pd.to_datetime(s, errors="ignore")):
             return s
         # Then try boolean
         if pd.api.types.is_bool_dtype(s := to_boolean(s)):
@@ -532,14 +524,14 @@ def cast_dtype(
 
 def cast_dtypes(
     df: pd.DataFrame,
-    dtypes_to_check: Optional[Union[List, Tuple, str, object]] = (
+    dtypes_to_check: list | tuple | str | object | None = (
         "object",
         "string",
         "number",
     ),
-    cols_to_check: Optional[Union[List, Tuple, pd.Series]] = None,
-    downcast: Optional[bool] = True,
-    use_categories: Optional[bool] = True,
+    cols_to_check: list | tuple | pd.Series | None = None,
+    downcast: bool | None = True,
+    use_categories: bool | None = True,
 ) -> pd.DataFrame:
     """
     Dynamically coerces the columns in a DataFrame to the correct dtype.

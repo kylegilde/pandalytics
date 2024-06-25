@@ -2,19 +2,19 @@
 Contains all the non-reliability, non-quantile metric functions
 These functions are generally creating metric aggregations to be used in plotly express functions.
 """
-from typing import Union, Optional
+
+
 import numpy as np
 import pandas as pd
-
 from sklearn.metrics import (
-    r2_score,
-    mean_squared_error,
     mean_absolute_error,
     mean_absolute_percentage_error,
+    mean_squared_error,
+    r2_score,
 )
 
 
-def _use_metric_abbreviations(df, metric_col: Optional[str] = "metric") -> None:
+def _use_metric_abbreviations(df, metric_col: str | None = "metric") -> None:
     """
 
     Parameters
@@ -27,21 +27,19 @@ def _use_metric_abbreviations(df, metric_col: Optional[str] = "metric") -> None:
 
     """
     df[metric_col] = (
-        df[metric_col]
-        .str.extract(r"((?<=\().+(?=\)))", expand=False)
-        .fillna(df[metric_col])
+        df[metric_col].str.extract(r"((?<=\().+(?=\)))", expand=False).fillna(df[metric_col])
     )
 
     return None
 
 
 def get_regression_metrics(
-    y_true: Union[pd.Series, np.ndarray],
-    y_pred: Union[pd.Series, np.ndarray],
-    metric_col: Optional[str] = "metric",
-    value_col: Optional[str] = "value",
+    y_true: pd.Series | np.ndarray,
+    y_pred: pd.Series | np.ndarray,
+    metric_col: str | None = "metric",
+    value_col: str | None = "value",
     use_abbreviations: bool = False,
-    use_dollar_sign: Optional[bool] = False,
+    use_dollar_sign: bool | None = False,
 ) -> pd.DataFrame:
     """
     Returns a 2-column DataFrame of standard regression metrics
@@ -85,17 +83,13 @@ def get_regression_metrics(
         f"Mean Absolute Error (MAE){dollar_sign}": mean_absolute_error(y_true, y_pred),
         "R-Squared": r2_score(y_true, y_pred),
         "Root Mean Squared Error (RMSE)": np.sqrt(mean_squared_error(y_true, y_pred)),
-        "Mean Absolute Percentage Error (MAPE) %": mean_absolute_percentage_error(
-            y_true, y_pred
-        ),
+        "Mean Absolute Percentage Error (MAPE) %": mean_absolute_percentage_error(y_true, y_pred),
         "Smoothed Mean Absolute Percentage Error (sMAPE) %": (
             np.abs(errors) * 2 / (y_pred + y_true)
         ).mean(),
     }
 
-    df_metrics = (
-        pd.Series(metrics_dict, name=value_col).rename_axis(metric_col).reset_index()
-    )
+    df_metrics = pd.Series(metrics_dict, name=value_col).rename_axis(metric_col).reset_index()
 
     if use_abbreviations:
         _use_metric_abbreviations(df_metrics, metric_col=metric_col)
@@ -103,9 +97,7 @@ def get_regression_metrics(
     return df_metrics
 
 
-def create_regression_metrics(
-    df: pd.DataFrame, y_true_col: str, y_pred_col: str, **kwargs
-):
+def create_regression_metrics(df: pd.DataFrame, y_true_col: str, y_pred_col: str, **kwargs):
     """
     Convenient wrapper for get_regression_metrics that uses a DataFrame input
 

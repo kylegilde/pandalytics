@@ -1,9 +1,9 @@
 """
 Contains date-related functions & classes
 """
-from typing import Union, Optional, List, Tuple
-from functools import partial
+
 import datetime as dt
+from functools import partial
 
 import numpy as np
 import pandas as pd
@@ -43,9 +43,9 @@ class USMajorHolidayCalendar(USFederalHolidayCalendar):
 
 
 def get_holiday_dates(
-    start_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-    end_date: Union[dt.date, dt.datetime, pd.Timestamp, str],
-    only_major_holidays: Optional[bool] = True,
+    start_date: dt.date | dt.datetime | pd.Timestamp | str,
+    end_date: dt.date | dt.datetime | pd.Timestamp | str,
+    only_major_holidays: bool | None = True,
 ) -> pd.DatetimeIndex:
     """
     A function wrapper for the holiday calendar class
@@ -68,17 +68,15 @@ def get_holiday_dates(
 
     """
 
-    holiday_class = (
-        USMajorHolidayCalendar() if only_major_holidays else USFederalHolidayCalendar()
-    )
+    holiday_class = USMajorHolidayCalendar() if only_major_holidays else USFederalHolidayCalendar()
 
     return holiday_class.holidays(pd.Timestamp(start_date), pd.Timestamp(end_date))
 
 
 def create_bday_flag(
     dt_series: pd.Series,
-    drop_holidays: Optional[bool] = True,
-    only_major_holidays: Optional[bool] = True,
+    drop_holidays: bool | None = True,
+    only_major_holidays: bool | None = True,
 ) -> pd.Series:
     """
 
@@ -106,11 +104,11 @@ def create_bday_flag(
 
 
 def filter_to_business_dates(
-    df_or_s: Union[pd.DataFrame, pd.Series],
-    date_col: Optional[Union[str, int]] = None,
-    drop_holidays: Optional[bool] = True,
-    only_major_holidays: Optional[bool] = True,
-) -> Union[pd.DataFrame, pd.Series]:
+    df_or_s: pd.DataFrame | pd.Series,
+    date_col: str | int | None = None,
+    drop_holidays: bool | None = True,
+    only_major_holidays: bool | None = True,
+) -> pd.DataFrame | pd.Series:
     """
 
     Parameters
@@ -161,8 +159,8 @@ def get_datetime_attribute(s: pd.Series, attribute: str) -> pd.Series:
 
 def get_datetime_attributes(
     s: pd.Series,
-    attributes_to_include: Optional[Union[List, pd.Series, Tuple]] = None,
-    prefix_separator: Optional[str] = "_",
+    attributes_to_include: list | pd.Series | tuple | None = None,
+    prefix_separator: str | None = "_",
 ) -> pd.DataFrame:
     """
     Returns the Numeric and Boolean DateTime Attribute Values as a DataFrame
@@ -195,22 +193,19 @@ def get_datetime_attributes(
     prefix = s.name + prefix_separator if s.name else ""
 
     return pd.concat(
-        [
-            get_datetime_attribute(s, a).rename(prefix + a)
-            for a in attributes_to_include
-        ],
+        [get_datetime_attribute(s, a).rename(prefix + a) for a in attributes_to_include],
         axis=1,
     )
 
 
 def count_fractional_business_days(
-        start_dt_series: pd.Series,
-        end_dt_series: pd.Series,
-        drop_holidays: Optional[bool] = True,
-        only_major_holidays: Optional[bool] = True,
-        no_negative_values: Optional[bool] = True,
-        business_hour_start: Optional[Union[int, float]] = 9,
-        business_hour_end: Optional[Union[int, float]] = 17,
+    start_dt_series: pd.Series,
+    end_dt_series: pd.Series,
+    drop_holidays: bool | None = True,
+    only_major_holidays: bool | None = True,
+    no_negative_values: bool | None = True,
+    business_hour_start: int | float | None = 9,
+    business_hour_end: int | float | None = 17,
 ) -> pd.Series:
     """
     Calculate the amount of fractional business days between to datetimes
@@ -239,9 +234,7 @@ def count_fractional_business_days(
     all_dates = pd.concat([start_dt_series, end_dt_series])
     min_date, max_date = all_dates.min(), all_dates.max()
 
-    holidays = get_holiday_dates(
-        min_date, max_date, only_major_holidays=only_major_holidays
-    )
+    holidays = get_holiday_dates(min_date, max_date, only_major_holidays=only_major_holidays)
 
     # get whole business days. The end date is excluded.
     whole_bdays = np.busday_count(
@@ -263,11 +256,7 @@ def count_fractional_business_days(
     # that preceded the start time. Otherwise, it will be zero.
     start_dt_loss.mask(
         lambda s: s == 1,
-        (
-                business_hour_end
-                - start_dt_series.dt.hour
-                - start_dt_series.dt.minute.div(60)
-        )
+        (business_hour_end - start_dt_series.dt.hour - start_dt_series.dt.minute.div(60))
         .div(business_hours_per_day)
         .clip(0, 1)  # Handles where the current hour < business start hour
         .sub(1),
