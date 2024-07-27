@@ -428,6 +428,23 @@ def cast_to_datetime(
     ).cast(df, cols_to_check=cols_to_check)
 
 
+
+def downcast_to_32_bit(df: pd.DataFrame) -> pd.DataFrame:
+    """Downcast float64, int64 and double dtypes to float32/float dtypes"""
+    new_dtypes = {}
+    for k, v in df.dtypes.to_dict().items():
+        v_str = str(v)
+        if "64" in v_str:
+            new_dtypes[k] = v_str.replace("64", "32")
+        elif "double" in v_str:
+            new_dtypes[k] = v_str.replace("double", "float")
+    if new_dtypes:
+        logging.info(f"{new_dtypes = }")
+        df = df.astype(new_dtypes)
+    return df
+    
+
+
 def downcast_to_float32_if_unique(s: pd.Series) -> pd.Series:
     """
     Downcast a Float64 Series to Float32 if the number of unique values can be
