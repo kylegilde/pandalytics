@@ -434,10 +434,11 @@ def downcast_to_32_bit(df: pd.DataFrame) -> pd.DataFrame:
     new_dtypes = {}
     for k, v in df.dtypes.to_dict().items():
         v_str = str(v)
-        if "64" in v_str:
-            new_dtypes[k] = v_str.replace("64", "32")
-        elif "double" in v_str:
-            new_dtypes[k] = v_str.replace("double", "float")
+        if "datetime" not in v_str:
+            if "64" in v_str:
+                new_dtypes[k] = v_str.replace("64", "32")
+            elif "double" in v_str:
+                new_dtypes[k] = v_str.replace("double", "float")
     if new_dtypes:
         logging.info(f"{new_dtypes = }")
         df = df.astype(new_dtypes)
