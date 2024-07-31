@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
+import logging
 
 import humanize
 import numpy as np
@@ -61,7 +62,7 @@ class DtypeCasting:
             casting_function = (
                 self.coerce_func.__name__ if self.coerce_func else f"astype({self.new_dtype})"
             )
-            print(f"Running {casting_function}")
+            logging.info(f"Running {casting_function}")
 
         if self.coerce_func:
             final_func = safe_partial(
@@ -220,12 +221,12 @@ def get_dtype_changes(
     if verbose:
         n_changes = len(df_changes)
 
-        print(f"{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
+        logging.info(f"{n_changes} of {len(old_dtypes)} dtypes were changed\n\n")
 
         if n_changes > 0:
-            print(df_changes, "\n")
+            logging.info(df_changes, "\n")
             if old_size:
-                print(f"Resized from {old_size} to {get_memory_usage(df_new)}")
+                logging.info(f"Resized from {old_size} to {get_memory_usage(df_new)}")
 
     return df_changes.column.to_list()
 
@@ -383,7 +384,7 @@ def cast_to_category(
     #     and "object" in df.columns.dtypes.astype("string")
     # ):
     #     if verbose:
-    #         print("Coercing objects")
+    #         logging.info("Coercing objects")
 
     #     df = cast_to_string(df, cols_to_check=cols_to_check, verbose=verbose)
 
