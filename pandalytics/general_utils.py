@@ -3,9 +3,62 @@ import inspect
 from collections.abc import Callable
 from functools import partial, wraps
 from time import time
+import logging
+from io import StringIO
 
 import pandas as pd
 from tqdm import tqdm
+
+
+def log_data(
+    *args,
+    show_data: bool | None = False,
+    show_info: bool | None = True,
+    sort_dicts: bool | None = False,
+    n_decimals: int | None = 4,
+    **kwargs,
+) -> None:
+    if logging.INFO >= logging.root.level:
+        assert len(args) == 0, "log_data doesn't accept any args"
+
+        if len(kwargs) > 1:
+            filler = "-" * 10
+            msg = f"\n\n{filler}Logging some data{filler}"
+            logging.info(msg)
+
+        for k, v in kwargs.items():
+            if isinstance(v, pd.DataFrame):
+                if show_info:
+                    buf = StringIO()
+                    v.info(memory_usage="deep", buf=buf)
+                    msg = f"\n\n{k} info =\n{buf.getvalue()}\n"
+                    logging.info(msg)
+
+                if show_data:
+                    msg = f"{k} = \n{v}"
+                    logging.info(msg)
+
+            else:
+                if isinstance(v, pd.Series):
+                    msg = f"{k} =\n{v}"
+                elif isinstance(v, int):
+                    msg = f"{k} = {v:,}"
+                elif isinstance(v, float):
+                    number_format = f",.{n_decimals}f"
+                    msg = f"{k} = {v:{number_format}}"
+                elif isinstance(v, dict):
+                    dict_string = pformat(v, sort_dicts=sort_dicts)
+                    msg = f"{k} =\n{dict_string}"
+                else:
+                    msg = f"{k} = {v}"
+                logging.info(msg)
+
+    return
+
+
+def log_data_and_return(a_variable: object, *args, **kwargs):
+    log_data(a_variable=a_variable, *args, **kwargs)
+    return a_variable
 
 
 def get_time_trials(
