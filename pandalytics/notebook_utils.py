@@ -1,5 +1,20 @@
 import IPython
-from IPython.display import HTML
+from IPython.display import HTML, display, Javascript
+
+
+def process_completed(msg: str | None = "Done"):
+    """
+    Plays an audio message.
+    Put this function at the end of long-calculating notebook cells.
+    Source: https://stackoverflow.com/a/74525871/27596895
+    """
+    js = f"""
+      var msg = new SpeechSynthesisUtterance();
+      msg.text = "{msg}";
+      window.speechSynthesis.speak(msg);
+    """
+    
+    display(Javascript(js))
 
 
 def create_code_toggle(button_name: str = "Toggle Code") -> IPython.core.display.HTML:
