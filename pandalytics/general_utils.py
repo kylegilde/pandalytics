@@ -64,6 +64,7 @@ def log_data_and_return(a_variable: object, *args, **kwargs):
 def get_time_trials(
     arr: pd.Series,
     func: Callable,
+    pass_as_kwargs: bool | None = False,
     s_name: str | None = "",
     weights: pd.Series | None = None,
     percentiles: list | tuple = (0.75, 0.95, 0.97, 0.99, 0.999),
@@ -77,7 +78,7 @@ def get_time_trials(
 
     times = []
     for x in tqdm(arr):
-        if isinstance(x, dict):
+        if pass_as_kwargs:
             start = time()
             func(**x, **kwargs)
             stop = time()
@@ -109,7 +110,13 @@ def get_time_trials(
 
     print(f"{longest_item=}")
 
-    return times_weighted.mul(1000).describe(percentiles=percentiles).rename(s_name).to_frame()
+    return (
+        times_weighted
+        .mul(1000)
+        .describe(percentiles=percentiles)
+        .rename(s_name)
+        .to_frame()
+    )
 
 
 def timing(f: Callable):
