@@ -8,19 +8,37 @@ import os
 
 import pandas as pd
 
-# set to "True" to use this decorator
-os.environ["cache_to_disk"] = "False"
+
+def create_hashed_filename(
+    fn: Callable, 
+    path: str, 
+    filetype: str,
+    args: list | None = list(), 
+    kwargs: dict | None = dict(),
+):
+
+    today = str(dt.datetime.now().date())
+    fn_name = fn.__name__
+    string_inputs = str(args) + str(kwargs)
+
+    m = hashlib.sha256()
+    m.update(string_inputs.encode("utf-8"))
+    hashed_string_inputs = m.hexdigest()
+
+    return f"{path}{fn_name}_{today}_{hashed_string_inputs}.{filetype}"    
+
 
 def cache_to_disk(
   fn: Callable | None = None, 
-  filetype: str | None = 'parquet'
+  filetype: str | None = 'parquet',
+  environ_variable_key: str | None = "cache_to_disk",
   path: str | None = "data/", 
 ):
     """
     Decorator used to cache function results to disk
     The function inputs can be mutable
 
-    os.environ["cache_to_disk"] must be "True" to use this decorator
+    os.environ[environ_variable_key] must be "True" to use this decorator
     
     Params
     ------
@@ -29,7 +47,12 @@ def cache_to_disk(
     path: a folder to store the file
     """
     if fn is None:
-        return partial(cache_to_disk, path=path, filetype=filetype)
+        return partial(
+          cache_to_disk, 
+          filetype=filetype,
+          environ_variable_key=environ_variable_key, 
+          path=path,
+        )
 
     if not os.path.exists(path):
         os.makedirs(path)
@@ -37,35 +60,25 @@ def cache_to_disk(
     @wraps(fn)
     def wrap(*args, **kwargs):
 
-        today = str(dt.datetime.now().date())
-        fn_name = fn.__name__
-        string_inputs = str(args) + str(kwargs)
+        if not ast.literal_eval(os.environ.get(environ_variable_key, "False")):
+            return fn(*args, **kwargs)
 
-        m = hashlib.sha256()
-        m.update(string_inputs.encode("utf-8"))
-        hashed_string_inputs = m.hexdigest()
+        if os.path.exists(filename := create_hashed_filename(fn, path, filetype, args, kwargs)):
 
-        filename = f"{path}{fn_name}_{today}_{hashed_string_inputs}.{filetype}"
-
-        if ast.literal_eval(os.environ.get("cache_to_disk", "False")) and os.path.exists(filename):
             logging.info(f"Reading cached file: {filename}")
-
             if filetype == "parquet":
-                result = pd.read_parquet(filename)
-            elif filetype == "json":
+                return pd.read_parquet(filename)
+            if filetype == "json":
                 with open(filename, "r") as fout:
-                    result = json.load(fout)
+                    return json.load(fout)
 
-        else:
-            result = fn(*args, **kwargs)
-
-            if ast.literal_eval(os.environ.get("cache_to_disk", "False")):
-                logging.info(f"Caching to disk: {filename}")
-                if filetype == "parquet":
-                    result.to_parquet(filename)
-                elif filetype == "json":
-                    with open(filename, "w") as fout:
-                        json.dump(result, fout)
+        result = fn(*args, **kwargs)
+        logging.info(f"Caching to disk: {filename}")
+        if filetype == "parquet":
+            result.to_parquet(filename)
+        elif filetype == "json":
+            with open(filename, "w") as fout:
+                json.dump(result, fout)
 
         return result
 
