@@ -16,6 +16,9 @@ def create_hashed_filename(
     args: list | None = list(), 
     kwargs: dict | None = dict(),
 ):
+    """
+    Create a hashed file path based upon the function name, date & function inputs  
+    """
 
     today = str(dt.datetime.now().date())
     fn_name = fn.__name__
@@ -25,32 +28,31 @@ def create_hashed_filename(
     m.update(string_inputs.encode("utf-8"))
     hashed_string_inputs = m.hexdigest()
 
-    return f"{path}{fn_name}_{today}_{hashed_string_inputs}.{filetype}"    
+    return f"{path}{fn_name}_{today}_{hashed_string_inputs}.{filetype}"
 
 
-def cache_to_disk(
+def cache_to_disk_decorator(
   fn: Callable | None = None, 
   filetype: str | None = 'parquet',
-  environ_variable_key: str | None = "cache_to_disk",
+  cache_to_disk_kwarg: str | None = "cache_to_disk",
   path: str | None = "data/", 
 ):
     """
     Decorator used to cache function results to disk
     The function inputs can be mutable
-
-    os.environ[environ_variable_key] must be "True" to use this decorator
     
     Params
     ------
     fn: a callable
     filetype: type of file to write and/or read
+    cache_to_disk_kwarg: the functions kwarg that determines whether to cache to disk
     path: a folder to store the file
     """
     if fn is None:
         return partial(
-          cache_to_disk, 
+          cache_to_disk_decorator, 
           filetype=filetype,
-          environ_variable_key=environ_variable_key, 
+          cache_to_disk_kwarg=cache_to_disk_kwarg, 
           path=path,
         )
 
@@ -60,7 +62,8 @@ def cache_to_disk(
     @wraps(fn)
     def wrap(*args, **kwargs):
 
-        if not ast.literal_eval(os.environ.get(environ_variable_key, "False")):
+        if not kwargs.get(cache_to_disk_kwarg, False):
+            logging.info(f"Skipping caching for {fn.__name__}")
             return fn(*args, **kwargs)
 
         if os.path.exists(filename := create_hashed_filename(fn, path, filetype, args, kwargs)):
