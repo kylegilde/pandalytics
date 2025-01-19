@@ -4,9 +4,49 @@ from functools import partial, wraps
 from time import time
 import logging
 from io import StringIO
+from pprint import pformat
 
 import pandas as pd
 from tqdm import tqdm
+
+
+def format_and_log(
+    k: str, 
+    v: object,
+    show_data: bool | None = False,
+    show_info: bool | None = True,
+    sort_dicts: bool | None = False,
+    n_decimals: int | None = 4,
+) -> None:
+   """
+   Format and log keys & values in a pretty way
+   """
+
+    if isinstance(v, pd.DataFrame):
+        if show_info:
+            buf = StringIO()
+            v.info(memory_usage="deep", buf=buf)
+            msg = f"\n\n{k} info =\n{buf.getvalue()}\n"
+
+        if show_data:
+            msg = f"{k} = \n{v}"
+
+    else:
+        if isinstance(v, pd.Series):
+            msg = f"{k} =\n{v}"
+        elif isinstance(v, int):
+            msg = f"{k} = {v:,}"
+        elif isinstance(v, float):
+            number_format = f",.{n_decimals}f"
+            msg = f"{k} = {v:{number_format}}"
+        elif isinstance(v, dict):
+            dict_string = pformat(v, sort_dicts=sort_dicts)
+            msg = f"{k} =\n{dict_string}"
+        else:
+            msg = f"{k} = {v}"
+
+    logging.info(msg)   
+    return
 
 
 def log_data(
@@ -17,40 +57,36 @@ def log_data(
     n_decimals: int | None = 4,
     **kwargs,
 ) -> None:
+   """Log variables"""
+   
     if logging.INFO >= logging.root.level:
-        assert len(args) == 0, "log_data doesn't accept any args"
-
-        if len(kwargs) > 1:
+        
+        if more_than_1 := (len(args) + len(kwargs) > 1):
             filler = "-" * 10
-            msg = f"\n\n{filler}Logging some data{filler}"
+            msg = f"\n\n{filler}Logging data{filler}"
             logging.info(msg)
 
+        log_fn = partial(
+            format_and_log,
+            show_data=show_data,
+            show_info=show_info,
+            sort_dicts=sort_dicts,
+            n_decimals=n_decimals,        
+        )
+
+        for arg in args:
+            for frame_info in inspect.stack():
+                for k, v in frame_info.frame.f_locals.items():
+                    if  k != "arg" and id(v) == id(arg):
+                        log_fn(k, v)
+                        break
+
         for k, v in kwargs.items():
-            if isinstance(v, pd.DataFrame):
-                if show_info:
-                    buf = StringIO()
-                    v.info(memory_usage="deep", buf=buf)
-                    msg = f"\n\n{k} info =\n{buf.getvalue()}\n"
-                    logging.info(msg)
+            log_fn(k, v)
 
-                if show_data:
-                    msg = f"{k} = \n{v}"
-                    logging.info(msg)
-
-            else:
-                if isinstance(v, pd.Series):
-                    msg = f"{k} =\n{v}"
-                elif isinstance(v, int):
-                    msg = f"{k} = {v:,}"
-                elif isinstance(v, float):
-                    number_format = f",.{n_decimals}f"
-                    msg = f"{k} = {v:{number_format}}"
-                elif isinstance(v, dict):
-                    dict_string = pformat(v, sort_dicts=sort_dicts)
-                    msg = f"{k} =\n{dict_string}"
-                else:
-                    msg = f"{k} = {v}"
-                logging.info(msg)
+        if more_than_1:
+            msg = f"\n{filler}Logging done{filler}\n\n"
+            logging.info(msg)
 
     return
 
