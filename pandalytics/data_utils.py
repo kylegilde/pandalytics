@@ -81,6 +81,8 @@ def log_data(
         )
 
         for arg in args:
+            # if an arg is provided, use the value to get the name of the variable
+            # search through the stacked scopes
             for frame_info in inspect.stack():
                 for k, v in frame_info.frame.f_locals.items():
                     if  k != "arg" and id(v) == id(arg):
