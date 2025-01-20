@@ -5,7 +5,9 @@ import hashlib
 import json
 import logging
 import os
+from typing import Literal
 
+import numpy as np
 import pandas as pd
 
 
@@ -13,8 +15,8 @@ def create_hashed_filename(
     fn: Callable, 
     path: str, 
     filetype: str,
-    args: list | None = list(), 
-    kwargs: dict | None = dict(),
+    args: list | None = [], 
+    kwargs: dict | None = {},
 ):
     """
     Create a hashed file path based upon the function name, date & function inputs  
@@ -33,7 +35,7 @@ def create_hashed_filename(
 
 def cache_to_disk_decorator(
   fn: Callable | None = None, 
-  filetype: str | None = 'parquet',
+  filetype: Literal["parquet", "json", "npy"] | None = 'parquet',
   cache_to_disk_kwarg: str | None = "cache_to_disk",
   path: str | None = "data/", 
 ):
@@ -74,6 +76,9 @@ def cache_to_disk_decorator(
             if filetype == "json":
                 with open(filename, "r") as fout:
                     return json.load(fout)
+            if filetype == "npy":
+                return np.load(filename)
+
 
         result = fn(*args, **kwargs)
         logging.info(f"Caching to disk: {filename}")
@@ -82,7 +87,10 @@ def cache_to_disk_decorator(
         elif filetype == "json":
             with open(filename, "w") as fout:
                 json.dump(result, fout)
+        elif filetype == "npy":
+            np.save(filename, result)
 
         return result
 
     return wrap
+    
