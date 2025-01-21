@@ -1,6 +1,46 @@
-import inspect
+import ast
 from collections.abc import Callable
+import inspect
+import logging
+import sys
 
+
+def parse_command_line_arguments(separator: str | None = "=") -> dict:
+    """
+    Dynamically parse any command line arguments into a dictionary with the correct data types
+    
+    Parameters
+    ----------
+    separator: the string value separating the key and value
+    
+    Returns
+    -------
+    a dict containing the key-value pairs
+    """
+    args = sys.argv[1:]  # Exclude the script name
+    arg_dict = {}
+
+    if args:
+        logging.info(f"{args = }")
+
+        for arg in args:
+            assert arg.startswith("--") and "=" in arg, f"{arg} must start with -- and contain an ="
+            key, value = arg[2:].split(separator, 1)
+    
+            try:
+                value = ast.literal_eval(value)
+            except ValueError:
+                pass
+    
+            arg_dict[key] = value
+            logging.info(f"{key}: {value} ({type(value)})")
+            # logging.info(f"{type(value) = }")
+    
+        logging.info(f"{arg_dict = }")
+    else:
+        logging.info("No command line arguments")
+    
+    return arg_dict
 
 def safe_partial(func: Callable, *args, **kwargs):
     """
