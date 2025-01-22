@@ -227,6 +227,7 @@ def cache_to_disk_decorator(
         return partial(
           cache_to_disk_decorator, 
           filetype=filetype,
+            use_polars=use_polars,
           cache_to_disk_kwarg=cache_to_disk_kwarg, 
           path=path,
         )
