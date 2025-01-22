@@ -207,6 +207,7 @@ def create_hashed_filename(
 def cache_to_disk_decorator(
   fn: Callable | None = None, 
   filetype: Literal["parquet", "json", "npy"] | None = 'parquet',
+  use_polars: bool | None = False,
   cache_to_disk_kwarg: str | None = "cache_to_disk",
   path: str | None = "data/", 
 ):
@@ -218,6 +219,7 @@ def cache_to_disk_decorator(
     ------
     fn: a callable
     filetype: type of file to write and/or read
+    use_polars: should polars be used instead of pandas for parquets?
     cache_to_disk_kwarg: the functions kwarg that determines whether to cache to disk
     path: a folder to store the file
     """
@@ -242,6 +244,8 @@ def cache_to_disk_decorator(
         if os.path.exists(filename := create_hashed_filename(fn, path, filetype, args, kwargs)):
 
             logging.info(f"Reading cached file: {filename}")
+            if filetype == "parquet" and use_polars:
+                return pl.read_parquet(filename)
             if filetype == "parquet":
                 return pd.read_parquet(filename)
             if filetype == "json":
@@ -253,7 +257,9 @@ def cache_to_disk_decorator(
 
         result = fn(*args, **kwargs)
         logging.info(f"Caching to disk: {filename}")
-        if filetype == "parquet":
+        if filetype == "parquet" and use_polars:
+            result.write_parquet(filename)
+        elif filetype == "parquet":
             result.to_parquet(filename)
         elif filetype == "json":
             with open(filename, "w") as fout:
