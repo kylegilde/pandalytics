@@ -239,7 +239,7 @@ def cache_to_disk_decorator(
     def wrap(*args, **kwargs):
 
         if not kwargs.get(cache_to_disk_kwarg, False):
-            logging.info(f"Skipping caching for {fn.__name__}")
+            logging.info(f"Skipping caching for {fn.__name__}  because '{cache_to_disk_kwarg}=True' was not in the kwargs")
             return fn(*args, **kwargs)
 
         if os.path.exists(filename := create_hashed_filename(fn, path, filetype, args, kwargs)):
