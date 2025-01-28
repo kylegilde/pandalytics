@@ -193,15 +193,13 @@ def create_hashed_filename(
     """
     Create a hashed file path based upon the function name, date & function inputs  
     """
-
     today = str(dt.datetime.now().date())
     fn_name = fn.__name__
     
     if is_method:
         args = args[1:]
-    
+
     string_inputs = str(args) + str(kwargs)
-    logging.debug(f"{args = }\n{kwargs =}")
     
     m = hashlib.sha256()
     m.update(string_inputs.encode("utf-8"))
@@ -246,12 +244,11 @@ def cache_to_disk_decorator(
     @wraps(fn)
     def wrap(*args, **kwargs):
 
-        if not kwargs.get(cache
-                          _to_disk_kwarg, False):
+        if not kwargs.get(cache_to_disk_kwarg, False):
             logging.info(f"Skipping caching for {fn.__name__}  because '{cache_to_disk_kwarg}=True' was not in the kwargs")
             return fn(*args, **kwargs)
 
-        if os.path.exists(filename := create_hashed_filename(fn, path, filetype, args, kwargs)):
+        if os.path.exists(filename := create_hashed_filename(fn, is_method, path, filetype, args, kwargs)):
 
             logging.info(f"Reading cached file: {filename}")
             if filetype == "parquet" and use_polars:
