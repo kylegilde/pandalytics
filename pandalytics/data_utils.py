@@ -16,6 +16,42 @@ import pandas as pd
 from tqdm import tqdm
 
 
+def change_display(
+    min_rows: int | None = 25,
+    max_rows: int | None = 50,
+    max_columns: int | None = 100,
+    max_colwidth: int | None = 400,
+    width: int | None = 1000,
+    n_decimals: int | None = 4,
+) -> pd.DataFrame:
+    """
+    Print more of your DataFrame by calling this function
+
+    Parameters
+    ----------
+    min_rows: min number of rows
+    max_rows: max number of rows
+    max_columns: max number of columns
+    max_colwidth: width of a column
+    width: max width
+    n_decimals: number of decimals to display in the float format
+
+    Returns
+    -------
+    None
+    """
+    pd.set_option("display.min_rows", min_rows)
+    pd.set_option("display.max_rows", max_rows)
+    pd.set_option("display.max_columns", max_columns)
+    pd.set_option("max_colwidth", max_colwidth)
+    pd.set_option("display.width", width)
+
+    format_string = "{:,.%df}" % n_decimals
+    pd.set_option("display.float_format", format_string.format)
+
+    return
+
+
 def format_and_log(
     k: str, 
     v: object,
