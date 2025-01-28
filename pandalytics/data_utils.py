@@ -184,8 +184,9 @@ def timing(f: Callable):
 
 def create_hashed_filename(
     fn: Callable, 
-    path: str, 
-    filetype: str,
+    is_method: bool | None = False,
+    path: str | None = "data/", 
+    filetype: Literal["parquet", "json", "npy"] | None = 'parquet',
     args: list | None = [], 
     kwargs: dict | None = {},
 ):
@@ -195,8 +196,13 @@ def create_hashed_filename(
 
     today = str(dt.datetime.now().date())
     fn_name = fn.__name__
+    
+    if is_method:
+        args = args[1:]
+    
     string_inputs = str(args) + str(kwargs)
-
+    logging.debug(f"{args = }\n{kwargs =}")
+    
     m = hashlib.sha256()
     m.update(string_inputs.encode("utf-8"))
     hashed_string_inputs = m.hexdigest()
@@ -205,11 +211,12 @@ def create_hashed_filename(
 
 
 def cache_to_disk_decorator(
-  fn: Callable | None = None, 
-  filetype: Literal["parquet", "json", "npy"] | None = 'parquet',
-  use_polars: bool | None = False,
-  cache_to_disk_kwarg: str | None = "cache_to_disk",
-  path: str | None = "data/", 
+    fn: Callable | None = None, 
+    is_method: bool | None = False,
+    filetype: Literal["parquet", "json", "npy"] | None = 'parquet',
+    use_polars: bool | None = False,
+    cache_to_disk_kwarg: str | None = "cache_to_disk",
+    path: str | None = "data/", 
 ):
     """
     Decorator used to cache function results to disk
@@ -225,11 +232,12 @@ def cache_to_disk_decorator(
     """
     if fn is None:
         return partial(
-          cache_to_disk_decorator, 
-          filetype=filetype,
+            cache_to_disk_decorator, 
+            is_method=is_method,
+            filetype=filetype,
             use_polars=use_polars,
-          cache_to_disk_kwarg=cache_to_disk_kwarg, 
-          path=path,
+            cache_to_disk_kwarg=cache_to_disk_kwarg, 
+            path=path,
         )
 
     if not os.path.exists(path):
@@ -238,7 +246,8 @@ def cache_to_disk_decorator(
     @wraps(fn)
     def wrap(*args, **kwargs):
 
-        if not kwargs.get(cache_to_disk_kwarg, False):
+        if not kwargs.get(cache
+                          _to_disk_kwarg, False):
             logging.info(f"Skipping caching for {fn.__name__}  because '{cache_to_disk_kwarg}=True' was not in the kwargs")
             return fn(*args, **kwargs)
 
@@ -254,6 +263,9 @@ def cache_to_disk_decorator(
                     return json.load(fout)
             if filetype == "npy":
                 return np.load(filename)
+            
+        else: 
+            logging.debug(f"{filename} does not exist")
 
 
         result = fn(*args, **kwargs)
