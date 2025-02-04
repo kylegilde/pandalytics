@@ -93,6 +93,7 @@ def format_and_log(
 
 def log_data(
     *args,
+    title: str | None = "Logging data",
     show_data: bool | None = False,
     show_info: bool | None = True,
     sort_dicts: bool | None = False,
@@ -105,7 +106,7 @@ def log_data(
         
         if more_than_1 := (len(args) + len(kwargs) > 1):
             filler = "-" * 10
-            msg = f"\n\n{filler}Logging data{filler}"
+            msg = f"\n\n{filler}{title}{filler}"
             logging.info(msg)
 
         log_fn = partial(
