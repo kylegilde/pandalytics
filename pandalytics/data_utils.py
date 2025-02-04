@@ -60,9 +60,9 @@ def format_and_log(
     sort_dicts: bool | None = False,
     n_decimals: int | None = 4,
 ) -> None:
-   """
-   Format and log keys & values in a pretty way
-   """
+    """
+    Format and log keys & values in a pretty way
+    """
 
     if isinstance(v, pd.DataFrame):
         if show_info:
@@ -100,7 +100,7 @@ def log_data(
     n_decimals: int | None = 4,
     **kwargs,
 ) -> None:
-   """Log variables"""
+    """Log variables"""
    
     if logging.INFO >= logging.root.level:
         
