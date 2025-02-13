@@ -16,6 +16,13 @@ import pandas as pd
 from tqdm import tqdm
 
 
+def get_n_days_ago(n: int):
+    """
+    Get a date in the past
+    """
+    return dt.datetime.now().date() - dt.timedelta(n)
+    
+
 def change_display(
     min_rows: int | None = 25,
     max_rows: int | None = 50,
