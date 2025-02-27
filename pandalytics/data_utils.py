@@ -59,7 +59,7 @@ def change_display(
     return
 
 
-def get_local_time():
+def _get_local_time():
     return (
         dt.datetime.now()
         .replace(microsecond=0)
@@ -69,19 +69,18 @@ def get_local_time():
 
 
 def log_local_time(msg=None):
-    t = get_local_time()
+    t = _get_local_time()
 
     if isinstance(msg, str):
         msg = f"{t}: {msg}"
     else:
         msg = t
 
-    get_local_time(msg)
+    logging.info(msg)
 
     return
-
     
-def get_tabular_schema(df: pl.DataFrame):
+def _get_tabular_schema(df: pl.DataFrame):
     
     return pl.DataFrame(
         tuple(dict(df.collect_schema()).items()), 
@@ -90,7 +89,7 @@ def get_tabular_schema(df: pl.DataFrame):
     )
 
 
-def get_info(df: pd.DataFrame | pl.DataFrame):
+def _get_info(df: pd.DataFrame | pl.DataFrame):
     if "pd" in globals() and isinstance(df, pd.DataFrame):
         buf = StringIO()
         df.info(memory_usage="deep", buf=buf)
@@ -99,7 +98,7 @@ def get_info(df: pd.DataFrame | pl.DataFrame):
         gb = round(df.estimated_size("gb"), 1)
         n_rows, n_cols = df.shape
         df_missing_counts = count_missing_values(df)
-        df_info = get_tabular_schema(df).join(df_missing_counts, on="column", how="left").fill_null(0)
+        df_info = _get_tabular_schema(df).join(df_missing_counts, on="column", how="left").fill_null(0)
         return f"""
         {gb} gb, {n_rows:,} rows & {n_cols:,} columns
         {df_info}
@@ -108,9 +107,9 @@ def get_info(df: pd.DataFrame | pl.DataFrame):
         logging.warning("You can only use log_info to see the info for Pandas & Polars DataFrames")
         
 
-def log_key_values(k, v, get_the_info: bool | None = False):
+def _log_key_values(k, v, get_the_info: bool | None = False):
     if get_the_info:
-        v = get_info(v)
+        v = _get_info(v)
     logging.info("%s = %s", k, v)
     return
 
@@ -124,7 +123,7 @@ def log_args(
     """
     if (len_args := len(args)):
         if logging_fn is None:
-            logging_fn = log_key_values
+            logging_fn = _log_key_values
         n_args_logged = 0
         locally_created_variables = {"arg", "n_args_logged", "len_args"}
         for arg in args:
@@ -154,7 +153,7 @@ def log_info(
 ) -> None:
     if logging.INFO >= logging.root.level:
         
-        logging_fn = partial(log_key_values, get_the_info=True)
+        logging_fn = partial(_log_key_values, get_the_info=True)
         
         log_args(args, logging_fn=logging_fn)
         for k, v in kwargs.items():
@@ -163,7 +162,7 @@ def log_info(
     return
 
 
-def format_and_log(
+def _format_and_log(
     k: str,
     v: object,
     sort_dicts: bool | None = False,
@@ -208,7 +207,7 @@ def log_data(
             log_local_time(msg)
 
         log_fn = partial(
-            format_and_log,
+            _format_and_log,
             sort_dicts=sort_dicts,
             n_decimals=n_decimals,
         )
