@@ -1,4 +1,3 @@
-from collections.abc import Callable
 import datetime as dt
 from functools import wraps, partial
 import hashlib
@@ -9,12 +8,13 @@ import logging
 import os
 from pprint import pformat
 import time
-from typing import Literal
+from typing import Literal, Callable
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+os.environ["local_timezone"] = os.environ.get("local_timezone", "US/Central")
 
 def get_n_days_ago(n: int):
     """
@@ -59,11 +59,113 @@ def change_display(
     return
 
 
+def get_local_time():
+    return (
+        dt.datetime.now()
+        .replace(microsecond=0)
+        .astimezone(pytz.timezone(os.environ["local_timezone"]))
+        .strftime("%I:%M:%S %p")
+    )
+
+
+def log_local_time(msg=None):
+    t = get_local_time()
+
+    if isinstance(msg, str):
+        msg = f"{t}: {msg}"
+    else:
+        msg = t
+
+    get_local_time(msg)
+
+    return
+
+    
+def get_tabular_schema(df: pl.DataFrame):
+    
+    return pl.DataFrame(
+        tuple(dict(df.collect_schema()).items()), 
+        orient="row",
+        schema=["column", "dtype"]
+    )
+
+
+def get_info(df: pd.DataFrame | pl.DataFrame):
+    if "pd" in globals() and isinstance(df, pd.DataFrame):
+        buf = StringIO()
+        df.info(memory_usage="deep", buf=buf)
+        return buf.getvalue()
+    elif "pl" in globals() and isinstance(df, pl.DataFrame):
+        gb = round(df.estimated_size("gb"), 1)
+        n_rows, n_cols = df.shape
+        df_missing_counts = count_missing_values(df)
+        df_info = get_tabular_schema(df).join(df_missing_counts, on="column", how="left").fill_null(0)
+        return f"""
+        {gb} gb, {n_rows:,} rows & {n_cols:,} columns
+        {df_info}
+        """
+    else:
+        logging.warning("You can only use log_info to see the info for Pandas & Polars DataFrames")
+        
+
+def log_key_values(k, v, get_the_info: bool | None = False):
+    if get_the_info:
+        v = get_info(v)
+    logging.info("%s = %s", k, v)
+    return
+
+    
+def log_args(
+    args: list,
+    logging_fn: Callable | None = None,
+):
+    """
+    Logs the variable names and their values for a given list of arguments 
+    """
+    if (len_args := len(args)):
+        if logging_fn is None:
+            logging_fn = log_key_values
+        n_args_logged = 0
+        locally_created_variables = {"arg", "n_args_logged", "len_args"}
+        for arg in args:
+            # Use arg_logged to stop iterating after the variable is logged
+            arg_logged = False 
+            # if an arg is provided, use the value to get the name of the variable
+            # search through the stacked scopes
+            for frame_info in inspect.stack():
+                if arg_logged:
+                    break
+                for k, v in frame_info.frame.f_locals.items():
+                    if arg_logged:
+                        break
+                    if k not in locally_created_variables and id(v) == id(arg):
+                        logging_fn(k, v)
+                        arg_logged = True
+                        n_args_logged += 1
+
+        if n_args_logged != len_args:
+            logging.warning("You can only use log_info to log actual variables and not expressions")
+        
+    return
+
+def log_info(
+    *args,
+    **kwargs,
+) -> None:
+    if logging.INFO >= logging.root.level:
+        
+        logging_fn = partial(log_key_values, get_the_info=True)
+        
+        log_args(args, logging_fn=logging_fn)
+        for k, v in kwargs.items():
+            logging_fn(k, v)
+
+    return
+
+
 def format_and_log(
-    k: str, 
+    k: str,
     v: object,
-    show_data: bool | None = False,
-    show_info: bool | None = True,
     sort_dicts: bool | None = False,
     n_decimals: int | None = 4,
 ) -> None:
@@ -71,74 +173,54 @@ def format_and_log(
     Format and log keys & values in a pretty way
     """
 
-    if isinstance(v, pd.DataFrame):
-        if show_info:
-            buf = StringIO()
-            v.info(memory_usage="deep", buf=buf)
-            msg = f"\n\n{k} info =\n{buf.getvalue()}\n"
-
-        if show_data:
-            msg = f"{k} = \n{v}"
-
+    if "pd" in globals() and isinstance(v, pd.DataFrame | pd.Series):
+        msg = f"{k} = \n{v}"
+    elif "pl" in globals() and isinstance(v, pl.DataFrame):
+        msg = f"{k} = \n{v}"
+    elif isinstance(v, int):
+        msg = f"{k} = {v:,}"
+    elif isinstance(v, float):
+        number_format = f",.{n_decimals}f"
+        msg = f"{k} = {v:{number_format}}"
+    elif isinstance(v, dict):
+        dict_string = pformat(v, sort_dicts=sort_dicts)
+        msg = f"{k} =\n{dict_string}"
     else:
-        if isinstance(v, pd.Series):
-            msg = f"{k} =\n{v}"
-        elif isinstance(v, int):
-            msg = f"{k} = {v:,}"
-        elif isinstance(v, float):
-            number_format = f",.{n_decimals}f"
-            msg = f"{k} = {v:{number_format}}"
-        elif isinstance(v, dict):
-            dict_string = pformat(v, sort_dicts=sort_dicts)
-            msg = f"{k} =\n{dict_string}"
-        else:
-            msg = f"{k} = {v}"
+        msg = f"{k} = {v}"
 
-    logging.info(msg)   
+    log_local_time(msg)
     return
 
 
 def log_data(
     *args,
     title: str | None = "Logging data",
-    show_data: bool | None = False,
-    show_info: bool | None = True,
     sort_dicts: bool | None = False,
     n_decimals: int | None = 4,
     **kwargs,
 ) -> None:
     """Log variables"""
-   
-    if logging.INFO >= logging.root.level:
-        
+
+    if logging.root.level <= logging.INFO:
         if more_than_1 := (len(args) + len(kwargs) > 1):
-            filler = "-" * 10
+            filler = "-" * 25
             msg = f"\n\n{filler}{title}{filler}"
-            logging.info(msg)
+            log_local_time(msg)
 
         log_fn = partial(
             format_and_log,
-            show_data=show_data,
-            show_info=show_info,
             sort_dicts=sort_dicts,
-            n_decimals=n_decimals,        
+            n_decimals=n_decimals,
         )
-
-        for arg in args:
-            # if an arg is provided, use the value to get the name of the variable
-            # search through the stacked scopes
-            for frame_info in inspect.stack():
-                for k, v in frame_info.frame.f_locals.items():
-                    if  k != "arg" and id(v) == id(arg):
-                        log_fn(k, v)
-                        break
+        
+        log_args(args, logging_fn=log_fn)
 
         for k, v in kwargs.items():
             log_fn(k, v)
 
         if more_than_1:
             msg = f"\n{filler}Logging done{filler}\n\n"
-            logging.info(msg)
+            log_local_time(msg)
 
     return
 
