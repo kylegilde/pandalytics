@@ -16,6 +16,23 @@ def process_completed(msg: str | None = "Done"):
     
     display(Javascript(js))
 
+    
+def _play_exception_sound(self, etype, value, tb, tb_offset=None):
+    """
+    Helper function to play exception messages
+    source: https://stackoverflow.com/a/41603739/27596895
+    """
+    self.showtraceback((etype, value, tb), tb_offset=tb_offset)
+    process_completed(str(etype) + str(value))
+    return
+
+def play_exception_sounds():
+    """
+    Call this function in a notebook to play exception messages
+    """
+    get_ipython().set_custom_exc((Exception,), _play_exception_sound)
+    return
+
 
 def create_code_toggle(button_name: str = "Toggle Code") -> IPython.core.display.HTML:
     """
