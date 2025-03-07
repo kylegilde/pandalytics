@@ -1,11 +1,11 @@
+from functools import partial
 import IPython
 from IPython.display import HTML, display, Javascript
 
 
-def process_completed(msg: str | None = "Done"):
+def play_message(msg: str):
     """
     Plays an audio message.
-    Put this function at the end of long-calculating notebook cells.
     Source: https://stackoverflow.com/a/74525871/27596895
     """
     js = f"""
@@ -16,21 +16,43 @@ def process_completed(msg: str | None = "Done"):
     
     display(Javascript(js))
 
+
+def process_done(msg: str | None = "Done"):
+    """
+    Plays an audio message, Done by default
+    Put this function at the end of long-calculating notebook cells.
+    Source: https://stackoverflow.com/a/74525871/27596895
+    """
+    play_message(msg)
     
-def _play_exception_sound(self, etype, value, tb, tb_offset=None):
+    
+def _play_exception_sound(
+    self, 
+    etype,
+    value,
+    tb, 
+    tb_offset=None, 
+    full_exception: bool | None = False
+):
     """
     Helper function to play exception messages
     source: https://stackoverflow.com/a/41603739/27596895
     """
     self.showtraceback((etype, value, tb), tb_offset=tb_offset)
-    process_completed(etype.__name__ + str(value).replace("'", "").replace('"', ""))
+    exception_message = etype.__name__
+    if full_exception:
+        exception_message += str(value).replace("'", "").replace('"', "")
+    play_message(exception_message)
     return
 
-def play_exception_sounds():
+
+def play_exception_sounds(full_exception=False):
     """
     Call this function in a notebook to play exception messages
     """
-    get_ipython().set_custom_exc((Exception,), _play_exception_sound)
+    
+    msg_fn = partial(_play_exception_sound, full_exception=full_exception)
+    get_ipython().set_custom_exc((Exception,), msg_fn)
     return
 
 
