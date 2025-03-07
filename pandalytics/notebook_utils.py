@@ -23,7 +23,7 @@ def _play_exception_sound(self, etype, value, tb, tb_offset=None):
     source: https://stackoverflow.com/a/41603739/27596895
     """
     self.showtraceback((etype, value, tb), tb_offset=tb_offset)
-    process_completed(str(etype) + str(value))
+    process_completed(str(etype) + str(value).replace("'", "").replace('"', ""))
     return
 
 def play_exception_sounds():
