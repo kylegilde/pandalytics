@@ -41,12 +41,13 @@ def _play_exception_sound(
     self.showtraceback((etype, value, tb), tb_offset=tb_offset)
     exception_message = etype.__name__
     if full_exception:
+        # remove punctuation that JavaScript cannot handle
         exception_message += str(value).replace("'", "").replace('"', "")
     play_message(exception_message)
     return
 
 
-def play_exception_sounds(full_exception=False):
+def play_exception_sounds(full_exception: bool | None = False):
     """
     Call this function in a notebook to play exception messages
     """
